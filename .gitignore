@@ -11,6 +11,7 @@ cscope.*
 *.sum
 *.out
 *.status
+*.gch
 
 # In source build files
 docs/doxygen.cfg

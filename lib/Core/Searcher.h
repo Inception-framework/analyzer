@@ -80,6 +80,23 @@ namespace klee {
     };
   };
 
+  class CortexMSearcher : public Searcher {
+    std::vector<ExecutionState*> states;
+
+  public:
+    ExecutionState &selectState();
+
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+
+    bool empty() { return states.empty(); }
+
+    void printName(llvm::raw_ostream &os) {
+      os << "CortexMSearcher\n";
+    }
+  };
+
   class DFSSearcher : public Searcher {
     std::vector<ExecutionState*> states;
 
@@ -137,7 +154,7 @@ namespace klee {
     DiscretePDF<ExecutionState*> *states;
     WeightType type;
     bool updateWeights;
-    
+
     double getWeight(ExecutionState*);
 
   public:
@@ -236,7 +253,7 @@ namespace klee {
     unsigned lastStartInstructions;
 
   public:
-    BatchingSearcher(Searcher *baseSearcher, 
+    BatchingSearcher(Searcher *baseSearcher,
                      double _timeBudget,
                      unsigned _instructionBudget);
     ~BatchingSearcher();

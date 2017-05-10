@@ -12,7 +12,7 @@ TOOLNAME = klee
 
 include $(LEVEL)/Makefile.config
 
-USEDLIBS = kleeCore.a kleeBasic.a kleeModule.a  kleaverSolver.a kleaverExpr.a kleeSupport.a 
+USEDLIBS = kleeCore.a kleeBasic.a kleeModule.a  kleaverSolver.a kleaverExpr.a kleeSupport.a
 LINK_COMPONENTS = jit bitreader bitwriter ipo linker engine
 
 ifeq ($(shell python -c "print($(LLVM_VERSION_MAJOR).$(LLVM_VERSION_MINOR) >= 3.3)"), True)
@@ -37,3 +37,5 @@ endif
 ifeq ($(HAVE_ZLIB),1)
   LIBS += -lz
 endif
+
+LIBS += -linception -lusb-1.0

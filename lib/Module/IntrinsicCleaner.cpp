@@ -21,6 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 
 #else
 #include "llvm/Constants.h"
@@ -48,6 +49,9 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 namespace klee {
@@ -64,10 +68,75 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
   return dirty;
 }
 
+static unsigned resolveIntrinsicID(Function* called) {
+
+  if(called->getName().size() < 1)
+    return 0;
+
+  llvm::errs() << called->getName() << "\n";
+
+  switch (called->getName()[5]) {
+  // case 'a':
+  //   if (called->getName().size() > 11 &&
+  //       std::string(called->getName().begin()+4, called->getName().begin()+11) == ".alpha.")
+  //     for (unsigned i = 0; i < num_alpha_intrinsics; ++i)
+  //       if (called->getName() == alpha_intrinsics[i].name)
+  //         return alpha_intrinsics[i].id;
+  //   break;
+  case 'd':
+    // if (called->getName().find("llvm.dbg.stoppoint") != std::string::npos)   return Intrinsic::dbg_stoppoint;
+    // if (called->getName().find("llvm.dbg.region.start") != std::string::npos)return Intrinsic::dbg_region_start;
+    // if (called->getName().find("llvm.dbg.region.end") != std::string::npos)  return Intrinsic::dbg_region_end;
+    // if (called->getName().find("llvm.dbg.func.start") != std::string::npos)  return Intrinsic::dbg_func_start;
+    if (called->getName().find("llvm.dbg.declare") != std::string::npos)     return Intrinsic::dbg_declare;
+    if (called->getName().find("llvm.dbg.value") != std::string::npos)     return Intrinsic::dbg_value;
+    break;
+  case 'f':
+    if (called->getName().find("llvm.frameaddress") != std::string::npos)  return Intrinsic::frameaddress;
+    break;
+  case 'g':
+    if (called->getName().find("llvm.gcwrite") != std::string::npos) return Intrinsic::gcwrite;
+    if (called->getName().find("llvm.gcread") != std::string::npos)  return Intrinsic::gcread;
+    if (called->getName().find("llvm.gcroot") != std::string::npos)  return Intrinsic::gcroot;
+    break;
+  // case 'i':
+    // if (called->getName().find("llvm.isunordered") != std::string::npos) return Intrinsic::isunordered;
+    // break;
+  case 'l':
+    if (called->getName().find("llvm.longjmp") != std::string::npos)  return Intrinsic::longjmp;
+    break;
+  case 'm':
+    if (called->getName().find("llvm.memcpy") != std::string::npos)  return Intrinsic::memcpy;
+    if (called->getName().find("llvm.memmove") != std::string::npos)  return Intrinsic::memmove;
+    if (called->getName().find("llvm.memset") != std::string::npos)  return Intrinsic::memset;
+    break;
+  case 'r':
+    if (called->getName().find("llvm.returnaddress") != std::string::npos)  return Intrinsic::returnaddress;
+    // if (called->getName().find("llvm.readport") != std::string::npos)       return Intrinsic::readport;
+    // if (called->getName().find("llvm.readio") != std::string::npos)         return Intrinsic::readio;
+    break;
+  case 's':
+    if (called->getName().find("llvm.setjmp") != std::string::npos)     return Intrinsic::setjmp;
+    if (called->getName().find("llvm.sigsetjmp") != std::string::npos)  return Intrinsic::sigsetjmp;
+    if (called->getName().find("llvm.siglongjmp") != std::string::npos) return Intrinsic::siglongjmp;
+    break;
+  case 'v':
+    if (called->getName().find("llvm.va_copy") != std::string::npos)  return Intrinsic::vacopy;
+    if (called->getName().find("llvm.va_end") != std::string::npos)   return Intrinsic::vaend;
+    if (called->getName().find("llvm.va_start") != std::string::npos) return Intrinsic::vastart;
+  // case 'w':
+    // if (called->getName().find("llvm.writeport") != std::string::npos) return Intrinsic::writeport;
+    // if (called->getName().find("llvm.writeio") != std::string::npos)   return Intrinsic::writeio;
+    // break;
+  default:
+    return 0;
+  }
+}
+
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
   bool block_split=false;
-  
+
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
 #else
@@ -77,13 +146,16 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
        (i != ie) && (block_split == false);) {
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
     // increment now since LowerIntrinsic deletion makes iterator invalid.
-    ++i;  
+    ++i;
     if(ii) {
-      switch (ii->getIntrinsicID()) {
+
+      unsigned id = resolveIntrinsicID(ii->getCalledFunction());
+
+      switch (id) {
       case Intrinsic::vastart:
       case Intrinsic::vaend:
         break;
-        
+
         // Lower vacopy so that object resolution etc is handled by
         // normal instructions.
         //
@@ -128,7 +200,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
 
         Value *op1 = ii->getArgOperand(0);
         Value *op2 = ii->getArgOperand(1);
-        
+
         Value *result = 0;
         Value *result_ext = 0;
         Value *overflow = 0;
@@ -136,9 +208,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         unsigned int bw = op1->getType()->getPrimitiveSizeInBits();
         unsigned int bw2 = op1->getType()->getPrimitiveSizeInBits()*2;
 
-        if ((ii->getIntrinsicID() == Intrinsic::uadd_with_overflow) ||
-            (ii->getIntrinsicID() == Intrinsic::usub_with_overflow) ||
-            (ii->getIntrinsicID() == Intrinsic::umul_with_overflow)) {
+        if ((id == Intrinsic::uadd_with_overflow) ||
+            (id == Intrinsic::usub_with_overflow) ||
+            (id == Intrinsic::umul_with_overflow)) {
 
           Value *op1ext =
             builder.CreateZExt(op1, IntegerType::get(M.getContext(), bw2));
@@ -149,18 +221,18 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           Value *int_max =
             builder.CreateZExt(int_max_s, IntegerType::get(M.getContext(), bw2));
 
-          if (ii->getIntrinsicID() == Intrinsic::uadd_with_overflow){
+          if (id == Intrinsic::uadd_with_overflow){
             result_ext = builder.CreateAdd(op1ext, op2ext);
-          } else if (ii->getIntrinsicID() == Intrinsic::usub_with_overflow){
+          } else if (id == Intrinsic::usub_with_overflow){
             result_ext = builder.CreateSub(op1ext, op2ext);
-          } else if (ii->getIntrinsicID() == Intrinsic::umul_with_overflow){
+          } else if (id == Intrinsic::umul_with_overflow){
             result_ext = builder.CreateMul(op1ext, op2ext);
           }
           overflow = builder.CreateICmpUGT(result_ext, int_max);
 
-        } else if ((ii->getIntrinsicID() == Intrinsic::sadd_with_overflow) ||
-                   (ii->getIntrinsicID() == Intrinsic::ssub_with_overflow) ||
-                   (ii->getIntrinsicID() == Intrinsic::smul_with_overflow)) {
+        } else if ((id == Intrinsic::sadd_with_overflow) ||
+                   (id == Intrinsic::ssub_with_overflow) ||
+                   (id == Intrinsic::smul_with_overflow)) {
 
           Value *op1ext =
             builder.CreateSExt(op1, IntegerType::get(M.getContext(), bw2));
@@ -175,11 +247,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           Value *int_min =
             builder.CreateSExt(int_min_s, IntegerType::get(M.getContext(), bw2));
 
-          if (ii->getIntrinsicID() == Intrinsic::sadd_with_overflow){
+          if (id == Intrinsic::sadd_with_overflow){
             result_ext = builder.CreateAdd(op1ext, op2ext);
-          } else if (ii->getIntrinsicID() == Intrinsic::ssub_with_overflow){
+          } else if (id == Intrinsic::ssub_with_overflow){
             result_ext = builder.CreateSub(op1ext, op2ext);
-          } else if (ii->getIntrinsicID() == Intrinsic::smul_with_overflow){
+          } else if (id == Intrinsic::smul_with_overflow){
             result_ext = builder.CreateMul(op1ext, op2ext);
           }
           overflow = builder.CreateOr(builder.CreateICmpSGT(result_ext, int_max),
@@ -198,7 +270,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         Value *resultStruct =
           builder.CreateInsertValue(UndefValue::get(ii->getType()), result, 0);
         resultStruct = builder.CreateInsertValue(resultStruct, overflow, 1);
-        
+
         ii->replaceAllUsesWith(resultStruct);
         ii->removeFromParent();
         delete ii;
@@ -257,6 +329,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
       default:
+
         if (LowerIntrinsics)
           IL->LowerIntrinsicCall(ii);
         dirty = true;

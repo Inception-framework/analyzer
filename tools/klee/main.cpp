@@ -613,7 +613,7 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
   {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using installed KLEE library runtime: ");
-    libDir = toolRoot.str().substr(0, 
+    libDir = toolRoot.str().substr(0,
                toolRoot.str().size() - strlen( KLEE_INSTALL_BIN_DIR ));
     llvm::sys::path::append(libDir, KLEE_INSTALL_RUNTIME_DIR);
   }
@@ -894,8 +894,9 @@ void externalsAndGlobalsCheck(const Module *m) {
         if (const CallInst *ci = dyn_cast<CallInst>(it)) {
           if (isa<InlineAsm>(ci->getCalledValue())) {
             klee_warning_once(&*fnIt,
-                              "function \"%s\" has inline asm",
+                              "function \"%s\" has inline asm (source can be instrumented here !)",
                               fnIt->getName().data());
+            llvm::errs() << "[Inception] instruction: " << dyn_cast<Instruction>(it) << "\n";
           }
         }
       }
@@ -1276,6 +1277,7 @@ int main(int argc, char **argv, char **envp) {
   }
 #endif
 
+  klee_warning("[Inception] bitcode loaded successfully\n");
 
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
@@ -1392,9 +1394,13 @@ int main(int argc, char **argv, char **envp) {
   }
   handler->getInfoStream() << "PID: " << getpid() << "\n";
 
+  llvm::errs() << "[Inception] Loading module  " << mainModule->getModuleIdentifier() << "\n";
   const Module *finalModule =
     interpreter->setModule(mainModule, Opts);
+
   externalsAndGlobalsCheck(finalModule);
+
+  llvm::errs() << "[Inception] Loading module  " << finalModule->getModuleIdentifier() << "\n";
 
   if (ReplayPathFile != "") {
     interpreter->setReplayPath(&replayPath);

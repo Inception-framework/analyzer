@@ -74,6 +74,13 @@ private:
 
 public:
   // Execution - Control Flow specific
+  bool interrupted;
+
+  //Unique state identifier
+  uintptr_t id;
+
+  // Interrupt priority
+  uint32_t priority;
 
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
@@ -106,7 +113,8 @@ public:
   /// used for searchers to decide what paths to explore
   double weight;
 
-  /// @brief Exploration depth, i.e., number of times KLEE branched for this state
+  /// @brief Exploration depth, i.e., number of times KLEE branched for this
+  /// state
   unsigned depth;
 
   /// @brief History of complete path: represents branches taken to

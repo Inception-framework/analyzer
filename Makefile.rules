@@ -624,7 +624,7 @@ ifeq ($(HOST_OS),AuroraUX)
 CPP.BaseFlags += -include llvm/System/Solaris.h
 endif # !HOST_OS - AuroraUX.
 
-LD.Flags      += -L$(LibDir) -L$(LLVMLibDir)
+LD.Flags      += -L$(LibDir) -L$(LLVMLibDir) -linception
 CPP.BaseFlags += -D_GNU_SOURCE -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 # All -I flags should go here, so that they don't confuse llvm-config.
 CPP.Flags     += $(sort -I$(PROJ_OBJ_DIR) -I$(PROJ_SRC_DIR) \
@@ -641,7 +641,7 @@ ifeq ($(BUILD_COMPONENT), 1)
                   $(TargetCommonOpts) $(CompileCommonOpts) -c
   Preprocess.CXX= $(BUILD_CXX) $(CPP.Flags) $(CPPFLAGS) $(TargetCommonOpts) \
                   $(CompileCommonOpts) $(CXX.Flags) -E
-  Link          = $(BUILD_CXX) $(CPP.Flags) $(CXX.Flags) $(CXXFLAGS) \
+  Link          = $(BUILD_CXX) $(CPP.Flags) $(CXX.Flags) $(CXXFLAGS) -linception\
 		  $(LDFLAGS) \
                   $(TargetCommonOpts) $(CompileCommonOpts) $(LD.Flags) $(Strip)
 else
@@ -651,7 +651,7 @@ else
                   $(TargetCommonOpts) $(CompileCommonOpts) -c
   Preprocess.CXX= $(CXX) $(CPP.Flags) $(TargetCommonOpts) $(CPPFLAGS) \
                   $(CompileCommonOpts) $(CXX.Flags) -E
-  Link          = $(CXX) $(CPP.Flags) $(CXX.Flags) $(CXXFLAGS) $(LDFLAGS) \
+  Link          = $(CXX) $(CPP.Flags) $(CXX.Flags) $(CXXFLAGS) $(LDFLAGS) -linception\
                   $(TargetCommonOpts)  $(CompileCommonOpts) $(LD.Flags) $(Strip)
 endif
 

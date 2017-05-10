@@ -4098,7 +4098,7 @@ else
 fi
 
 if test X"${withval}" = Xdefault; then
-   with_runtime=Release+Asserts
+   with_runtime=Debug+Asserts
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking runtime configuration" >&5
@@ -4106,20 +4106,20 @@ $as_echo_n "checking runtime configuration... " >&6; }
 if test X${with_runtime} = XRelease; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Release" >&5
 $as_echo "Release" >&6; }
-    RUNTIME_ENABLE_OPTIMIZED=1
+    RUNTIME_ENABLE_OPTIMIZED=0
 
-    RUNTIME_DISABLE_ASSERTIONS=1
+    RUNTIME_DISABLE_ASSERTIONS=0
 
-    RUNTIME_DEBUG_SYMBOLS=
+    RUNTIME_DEBUG_SYMBOLS=1
 
 elif test X${with_runtime} = XRelease+Asserts; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Release+Asserts" >&5
 $as_echo "Release+Asserts" >&6; }
-    RUNTIME_ENABLE_OPTIMIZED=1
+    RUNTIME_ENABLE_OPTIMIZED=0
 
     RUNTIME_DISABLE_ASSERTIONS=0
 
-    RUNTIME_DEBUG_SYMBOLS=
+    RUNTIME_DEBUG_SYMBOLS=1
 
 elif test X${with_runtime} = XDebug; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Debug" >&5

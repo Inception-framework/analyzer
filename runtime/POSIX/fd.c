@@ -1347,6 +1347,7 @@ int select(int nfds, fd_set *read, fd_set *write,
     /* Never allow blocking select. This is broken but what else can
        we do. */
     struct timeval tv = { 0, 0 };    
+#define __NR_select 1067
     int r = syscall(__NR_select, os_nfds, 
                     &os_read, &os_write, &os_except, &tv);
     
