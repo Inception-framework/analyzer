@@ -73,7 +73,7 @@ static unsigned resolveIntrinsicID(Function* called) {
   if(called->getName().size() < 1)
     return 0;
 
-  llvm::errs() << called->getName() << "\n";
+  // llvm::errs() << called->getName() << "\n";
 
   switch (called->getName()[5]) {
   // case 'a':
@@ -83,6 +83,8 @@ static unsigned resolveIntrinsicID(Function* called) {
   //       if (called->getName() == alpha_intrinsics[i].name)
   //         return alpha_intrinsics[i].id;
   //   break;
+  case 'u':
+    if (called->getName().find("llvm.uadd.with.overflow.i32") != std::string::npos)     return Intrinsic::uadd_with_overflow;
   case 'd':
     // if (called->getName().find("llvm.dbg.stoppoint") != std::string::npos)   return Intrinsic::dbg_stoppoint;
     // if (called->getName().find("llvm.dbg.region.start") != std::string::npos)return Intrinsic::dbg_region_start;

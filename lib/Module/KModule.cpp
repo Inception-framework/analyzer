@@ -374,13 +374,9 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   case eSwitchTypeLLVM:  pm3.add(createLowerSwitchPass()); break;
   default: klee_error("invalid --switch-type");
   }
-  klee_warning("HERE !!\n\n");
   pm3.add(new IntrinsicCleanerPass(*targetData));
-  klee_warning("HERE !!\n\n");
   pm3.add(new PhiCleanerPass());
-  klee_warning("HERE !!\n\n");
   pm3.run(*module);
-  klee_warning("HERE !!\n\n");
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   // For cleanliness see if we can discard any of the functions we

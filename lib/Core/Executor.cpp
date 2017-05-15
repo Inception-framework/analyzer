@@ -347,99 +347,186 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString) {
 
-  Inception::RealMemory::add_submemory(0x20000000, 0x40000,
-                                       new std::string("SRAM"));
-  Inception::RealMemory::add_submemory(0x20000000, 0x100000,
-                                       new std::string("FLASH"));
 
-  Inception::RealMemory::add_submemory(
-      0x40000000, 0x3FF, new std::string("Global Control Registers"));
+  Inception::RealMemory::add_submemory(0x40050000, 0xCC,
+                                   new std::string("CGU"));
 
-  Inception::RealMemory::add_submemory(
-      0x40000400, 0x7FF, new std::string("System Initialization Registers"));
+  Inception::RealMemory::add_submemory(0xE000ED00, 0xE0,
+                                  new std::string("SCU"));
 
-  Inception::RealMemory::add_submemory(0x40004000, 0x1FFF,
-                                       new std::string("Crypto"));
 
-  Inception::RealMemory::add_submemory(0x00000000, 0x0000FFFF,
-                                       new std::string("ROM"));
-  // Inception::RealMemory::add_submemory(0x00010000, 0x0FFEFFFF, new
-  // std::string("RESERVED_1"));
-  // Inception::RealMemory::add_submemory("MAXIM_OTP", 0x10100000, 0x00000FFF,
-  // "access": ["read"]}
-  Inception::RealMemory::add_submemory(0x10101000, 0x0000FFFF,
-                                       new std::string("USER_OTP"));
-  // Inception::RealMemory::add_submemory(0x10111000, 0x0FEEEFFF, new
-  // std::string("RESERVED_2"));
-  // Inception::RealMemory::add_submemory(0x10111000, 0x0FEEEFFF, new
-  // std::string("RESERVED_2"));
-  Inception::RealMemory::add_submemory(
-      0x40000000, 0x000003FF, new std::string("GLOBAL_CONTROL_REGISTERS"));
-  Inception::RealMemory::add_submemory(
-      0x40000400, 0x000003FF,
-      new std::string("SYSTEM_INITIALIZATION_REGISTERS"));
-  Inception::RealMemory::add_submemory(0x40001000, 0x00000FFF,
-                                       new std::string("CRYPTO"));
-  Inception::RealMemory::add_submemory(0x40003000, 0x00000FFF,
-                                       new std::string("WATCH_DOG_TIMER"));
-  Inception::RealMemory::add_submemory(0x40004000, 0x00000FFF,
-                                       new std::string("SECURITY_MONITOR"));
-  Inception::RealMemory::add_submemory(0x40005000, 0x000003FF,
-                                       new std::string("AES_KEYS"));
-  Inception::RealMemory::add_submemory(0x40006000, 0x00000FFF,
-                                       new std::string("RTC"));
-  Inception::RealMemory::add_submemory(0x40008000, 0x00000FFF,
-                                       new std::string("GPIO_0"));
-  Inception::RealMemory::add_submemory(0x40009000, 0x00000FFF,
-                                       new std::string("GPIO_1"));
-  Inception::RealMemory::add_submemory(0x4000A000, 0x00000FFF,
-                                       new std::string("GPIO_2"));
-  Inception::RealMemory::add_submemory(0x4000C000, 0x00000FFF,
-                                       new std::string("I2C"));
-  Inception::RealMemory::add_submemory(0x40010000, 0x00000FFF,
-                                       new std::string("TIMER_0"));
-  Inception::RealMemory::add_submemory(0x40011000, 0x00000FFF,
-                                       new std::string("TIMER_1"));
-  Inception::RealMemory::add_submemory(0x40012000, 0x00000FFF,
-                                       new std::string("TIMER_2"));
-  Inception::RealMemory::add_submemory(0x40013000, 0x00000FFF,
-                                       new std::string("TIMER_3"));
-  Inception::RealMemory::add_submemory(0x40014000, 0x00000FFF,
-                                       new std::string("TIMER_4"));
-  Inception::RealMemory::add_submemory(0x40015000, 0x00000FFF,
-                                       new std::string("TIMER_5"));
-  Inception::RealMemory::add_submemory(0x40018000, 0x00000FFF,
-                                       new std::string("SPI0"));
-  Inception::RealMemory::add_submemory(0x40019000, 0x00000FFF,
-                                       new std::string("SPI1"));
-  Inception::RealMemory::add_submemory(0x4001A000, 0x00000FFF,
-                                       new std::string("SPI2"));
-  Inception::RealMemory::add_submemory(0x40020000, 0x00000FFF,
-                                       new std::string("UART0"));
-  Inception::RealMemory::add_submemory(0x40021000, 0x00000FFF,
-                                       new std::string("UART1"));
-  Inception::RealMemory::add_submemory(0x40028000, 0x00000FFF,
-                                       new std::string("DMA"));
-  Inception::RealMemory::add_submemory(0x40029000, 0x00000FFF,
-                                       new std::string("FLASH_CONTROLLER"));
-  Inception::RealMemory::add_submemory(0x4002A000, 0x00000FFF,
-                                       new std::string("CACHE_CONTROLLER"));
-  Inception::RealMemory::add_submemory(0x4002B000, 0x00000FFF,
-                                       new std::string("MAGNETIC_STRIPE_DSP"));
-  Inception::RealMemory::add_submemory(0x4002C000, 0x00000FFF,
-                                       new std::string("SMART_CARD"));
-  Inception::RealMemory::add_submemory(0x40030000, 0x00000FFF,
-                                       new std::string("MONO_LCD_CONTROLLER"));
-  Inception::RealMemory::add_submemory(0x40031000, 0x00000FFF,
-                                       new std::string("COLOR_LCD_CONTROLLER"));
-  Inception::RealMemory::add_submemory(0x40032000, 0x00000FFF,
-                                       new std::string("SECURE_KEYBOARD"));
-  Inception::RealMemory::add_submemory(0x40034000, 0x00000FFF,
-                                       new std::string("ADC"));
-  Inception::RealMemory::add_submemory(0x4003800, 0x00000FFF,
-                                       new std::string("DAC"));
-  Inception::RealMemory::add_submemory(0x42000000, 0x0FFFFFFF,
-                                       new std::string("GPIO"));
+  // Inception::RealMemory::add_submemory(0x20000000, 0x40000,
+  //                                      new std::string("SRAM"));
+  // Inception::RealMemory::add_submemory(0x10000000, 0x100000,
+  //                                      new std::string("FLASH"));
+
+  // Inception::RealMemory::add_submemory(0xE000E000, 0x5FFFF,
+  //                                     new std::string("SCU"));
+  //
+  // Inception::RealMemory::add_submemory(0x400F4000, 0x3FFC,
+  //                                  new std::string("HIGH_SPEED_GPIO"));
+  // Inception::RealMemory::add_submemory(0x42000000, 0x1FFFFC,
+  //                                 new std::string("PERIPHERAL_BIT_BAND_ALIAS_REGION"));
+  // Inception::RealMemory::add_submemory(0x80000000, 0x7FFFFFC,
+  //                             new std::string("SPIFI_DATA"));
+  // Inception::RealMemory::add_submemory(0xE0000000, 0x1FFFFFFF,
+  //                             new std::string("ARM_PRIVATE_BUS"));
+
+
+  // Inception::RealMemory::add_submemory(0x400E4000, 0x5FFC,
+  //                             new std::string("ADC1"));
+  // Inception::RealMemory::add_submemory(0x400E3000, 0x5FFC,
+  //                             new std::string("ADC0"));
+  // Inception::RealMemory::add_submemory(0x400E2000, 0x5FFC,
+  //                             new std::string("C_CAN0"));
+  // Inception::RealMemory::add_submemory(0x400E1000, 0x5FFC,
+  //                             new std::string("DAC"));
+  // Inception::RealMemory::add_submemory(0x400E0000, 0x5FFC,
+  //                             new std::string("I2C1"));
+
+  // Inception::RealMemory::add_submemory(0x400C7000, 0x5FFC, new std::string("GIMA"));
+  // Inception::RealMemory::add_submemory(0x400C6000, 0x5FFC, new std::string("QEI"));
+  // Inception::RealMemory::add_submemory(0x400C5000, 0x5FFC, new std::string("SSP1"));
+  // Inception::RealMemory::add_submemory(0x400C4000, 0x5FFC, new std::string("TIMER3"));
+  // Inception::RealMemory::add_submemory(0x400C3000, 0x5FFC, new std::string("TIMER2"));
+  // Inception::RealMemory::add_submemory(0x400C2000, 0x5FFC, new std::string("USART3"));
+  // Inception::RealMemory::add_submemory(0x400C1000, 0x5FFC, new std::string("USART2"));
+  // Inception::RealMemory::add_submemory(0x400C0000, 0x5FFC, new std::string("RI_TIMER"));
+  //
+  // Inception::RealMemory::add_submemory(0x400A4000, 0x5FFC, new std::string("C_CAN1"));
+  // Inception::RealMemory::add_submemory(0x400A3000, 0x5FFC, new std::string("I2S1"));
+  // Inception::RealMemory::add_submemory(0x400A2000, 0x5FFC, new std::string("I2S0"));
+  // Inception::RealMemory::add_submemory(0x400A1000, 0x5FFC, new std::string("I2C0"));
+  // Inception::RealMemory::add_submemory(0x400A0000, 0x5FFC, new std::string("MOTOR_CONTROL_PWM"));
+  //
+  // Inception::RealMemory::add_submemory(0x40089000, 0x5FFC, new std::string("GPIO_GROUP1"));
+  // Inception::RealMemory::add_submemory(0x40088000, 0x5FFC, new std::string("GPIO_GROUP0"));
+  // Inception::RealMemory::add_submemory(0x40087000, 0x5FFC, new std::string("GPIO_INTERRUPTS"));
+  // Inception::RealMemory::add_submemory(0x40086000, 0x5FFC, new std::string("SCU"));
+  // Inception::RealMemory::add_submemory(0x40085000, 0x5FFC, new std::string("TIMER1"));
+  // Inception::RealMemory::add_submemory(0x40084000, 0x5FFC, new std::string("TIMER0"));
+  // Inception::RealMemory::add_submemory(0x40083000, 0x5FFC, new std::string("SSP0"));
+  // Inception::RealMemory::add_submemory(0x40082000, 0x5FFC, new std::string("UART1"));
+  // Inception::RealMemory::add_submemory(0x40081000, 0x5FFC, new std::string("USART0"));
+  // Inception::RealMemory::add_submemory(0x40080000, 0x5FFC, new std::string("WWDT"));
+
+
+  // Inception::RealMemory::add_submemory(0x40054000, 0x5FFC, new std::string("RESERVED"));
+  // Inception::RealMemory::add_submemory(0x40053000, 0x5FFC, new std::string("RGU"));
+  // Inception::RealMemory::add_submemory(0x40052000, 0x5FFC, new std::string("CCU2"));
+  // Inception::RealMemory::add_submemory(0x40051000, 0x5FFC, new std::string("CCU1"));
+  // Inception::RealMemory::add_submemory(0x40050000, 0x5FFC, new std::string("CGU"));
+  //
+  // Inception::RealMemory::add_submemory(0x40047000, 0x5FFC, new std::string("RESERVED"));
+  // Inception::RealMemory::add_submemory(0x40046000, 0x5FFC, new std::string("RTC"));
+  // Inception::RealMemory::add_submemory(0x40045000, 0x5FFC, new std::string("OTP_CONTROLLER"));
+  // Inception::RealMemory::add_submemory(0x40044000, 0x5FFC, new std::string("EVENT_ROUTER"));
+  // Inception::RealMemory::add_submemory(0x40043000, 0x5FFC, new std::string("CREG"));
+  // Inception::RealMemory::add_submemory(0x40042000, 0x5FFC, new std::string("POWER_MODE_CONTROL"));
+  // Inception::RealMemory::add_submemory(0x40041000, 0x5FFC, new std::string("BACKUP_REGISTERS"));
+  // Inception::RealMemory::add_submemory(0x40040000, 0x5FFC, new std::string("ALARM_TIMER"));
+  //
+  // Inception::RealMemory::add_submemory(0x4001000, 0x1FFC, new std::string("ETHERNET"));
+  //
+  // Inception::RealMemory::add_submemory(0x40009000, 0x5FFC, new std::string("RESERVED"));
+  // Inception::RealMemory::add_submemory(0x40008000, 0x5FFC, new std::string("LCD"));
+  // Inception::RealMemory::add_submemory(0x40007000, 0x5FFC, new std::string("USB1"));
+  // Inception::RealMemory::add_submemory(0x40006000, 0x5FFC, new std::string("USB0"));
+  Inception::RealMemory::add_submemory(0x40005000, 0x5FFC, new std::string("EMC"));
+  // Inception::RealMemory::add_submemory(0x40004000, 0x5FFC, new std::string("SD/MMC"));
+  // Inception::RealMemory::add_submemory(0x40003000, 0x5FFC, new std::string("SPIFI"));
+  // Inception::RealMemory::add_submemory(0x40002000, 0x5FFC, new std::string("DMA"));
+  // Inception::RealMemory::add_submemory(0x40001000, 0x5FFC, new std::string("RESERVED"));
+  // Inception::RealMemory::add_submemory(0x40000000, 0x5FFC, new std::string("SCT"));
+
+  // Inception::RealMemory::add_submemory(
+  //     0x40000000, 0x3FF, new std::string("Global Control Registers"));
+  //
+  // Inception::RealMemory::add_submemory(
+  //     0x40000400, 0x7FF, new std::string("System Initialization Registers"));
+  //
+  // Inception::RealMemory::add_submemory(0x40004000, 0x1FFF,
+  //                                      new std::string("Crypto"));
+  //
+  // Inception::RealMemory::add_submemory(0x00000000, 0x0000FFFF,
+  //                                      new std::string("ROM"));
+  // // Inception::RealMemory::add_submemory(0x00010000, 0x0FFEFFFF, new
+  // // std::string("RESERVED_1"));
+  // // Inception::RealMemory::add_submemory("MAXIM_OTP", 0x10100000, 0x00000FFF,
+  // // "access": ["read"]}
+  // Inception::RealMemory::add_submemory(0x10101000, 0x0000FFFF,
+  //                                      new std::string("USER_OTP"));
+  // // Inception::RealMemory::add_submemory(0x10111000, 0x0FEEEFFF, new
+  // // std::string("RESERVED_2"));
+  // // Inception::RealMemory::add_submemory(0x10111000, 0x0FEEEFFF, new
+  // // std::string("RESERVED_2"));
+  // Inception::RealMemory::add_submemory(
+  //     0x40000000, 0x000003FF, new std::string("GLOBAL_CONTROL_REGISTERS"));
+  // Inception::RealMemory::add_submemory(
+  //     0x40000400, 0x000003FF,
+  //     new std::string("SYSTEM_INITIALIZATION_REGISTERS"));
+  // Inception::RealMemory::add_submemory(0x40001000, 0x00000FFF,
+  //                                      new std::string("CRYPTO"));
+  // Inception::RealMemory::add_submemory(0x40003000, 0x00000FFF,
+  //                                      new std::string("WATCH_DOG_TIMER"));
+  // Inception::RealMemory::add_submemory(0x40004000, 0x00000FFF,
+  //                                      new std::string("SECURITY_MONITOR"));
+  // Inception::RealMemory::add_submemory(0x40005000, 0x000003FF,
+  //                                      new std::string("AES_KEYS"));
+  // Inception::RealMemory::add_submemory(0x40006000, 0x00000FFF,
+  //                                      new std::string("RTC"));
+  // Inception::RealMemory::add_submemory(0x40008000, 0x00000FFF,
+  //                                      new std::string("GPIO_0"));
+  // Inception::RealMemory::add_submemory(0x40009000, 0x00000FFF,
+  //                                      new std::string("GPIO_1"));
+  // Inception::RealMemory::add_submemory(0x4000A000, 0x00000FFF,
+  //                                      new std::string("GPIO_2"));
+  // Inception::RealMemory::add_submemory(0x4000C000, 0x00000FFF,
+  //                                      new std::string("I2C"));
+  // Inception::RealMemory::add_submemory(0x40010000, 0x00000FFF,
+  //                                      new std::string("TIMER_0"));
+  // Inception::RealMemory::add_submemory(0x40011000, 0x00000FFF,
+  //                                      new std::string("TIMER_1"));
+  // Inception::RealMemory::add_submemory(0x40012000, 0x00000FFF,
+  //                                      new std::string("TIMER_2"));
+  // Inception::RealMemory::add_submemory(0x40013000, 0x00000FFF,
+  //                                      new std::string("TIMER_3"));
+  // Inception::RealMemory::add_submemory(0x40014000, 0x00000FFF,
+  //                                      new std::string("TIMER_4"));
+  // Inception::RealMemory::add_submemory(0x40015000, 0x00000FFF,
+  //                                      new std::string("TIMER_5"));
+  // Inception::RealMemory::add_submemory(0x40018000, 0x00000FFF,
+  //                                      new std::string("SPI0"));
+  // Inception::RealMemory::add_submemory(0x40019000, 0x00000FFF,
+  //                                      new std::string("SPI1"));
+  // Inception::RealMemory::add_submemory(0x4001A000, 0x00000FFF,
+  //                                      new std::string("SPI2"));
+  // Inception::RealMemory::add_submemory(0x40020000, 0x00000FFF,
+  //                                      new std::string("UART0"));
+  // Inception::RealMemory::add_submemory(0x40021000, 0x00000FFF,
+  //                                      new std::string("UART1"));
+  // Inception::RealMemory::add_submemory(0x40028000, 0x00000FFF,
+  //                                      new std::string("DMA"));
+  // Inception::RealMemory::add_submemory(0x40029000, 0x00000FFF,
+  //                                      new std::string("FLASH_CONTROLLER"));
+  // Inception::RealMemory::add_submemory(0x4002A000, 0x00000FFF,
+  //                                      new std::string("CACHE_CONTROLLER"));
+  // Inception::RealMemory::add_submemory(0x4002B000, 0x00000FFF,
+  //                                      new std::string("MAGNETIC_STRIPE_DSP"));
+  // Inception::RealMemory::add_submemory(0x4002C000, 0x00000FFF,
+  //                                      new std::string("SMART_CARD"));
+  // Inception::RealMemory::add_submemory(0x40030000, 0x00000FFF,
+  //                                      new std::string("MONO_LCD_CONTROLLER"));
+  // Inception::RealMemory::add_submemory(0x40031000, 0x00000FFF,
+  //                                      new std::string("COLOR_LCD_CONTROLLER"));
+  // Inception::RealMemory::add_submemory(0x40032000, 0x00000FFF,
+  //                                      new std::string("SECURE_KEYBOARD"));
+  // Inception::RealMemory::add_submemory(0x40034000, 0x00000FFF,
+  //                                      new std::string("ADC"));
+  // Inception::RealMemory::add_submemory(0x4003800, 0x00000FFF,
+  //                                      new std::string("DAC"));
+  // Inception::RealMemory::add_submemory(0x42000000, 0x0FFFFFFF,
+  //                                      new std::string("GPIO"));
 
   if (coreSolverTimeout)
     UseForkedCoreSolver = true;
@@ -1713,34 +1800,35 @@ static inline const llvm::fltSemantics *fpWidthToSemantics(unsigned width) {
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
 
-
   // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
 
-  llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
-               << i->getParent()->getParent()->getName() << "\n";
-  std::string srcFile = ki->info->file;
-  if (srcFile.length() > 42) {
-    srcFile = srcFile.substr(42);
-  }
-  llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile
-               << "\n";
-  std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
-  std::vector<StackFrame>::iterator stackEnd = state.stack.end();
-  int stack_idx = 0;
-  errs() << "asm line " << ki->info->assemblyLine << "\n";
-  while (stackSeek != stackEnd) {
-    errs() << "stack idx " << stack_idx << " in ";
-    errs() << stackSeek->kf->function->getName();
-    if (stackSeek->caller) {
-      errs() << " line " << stackSeek->caller->info->assemblyLine;
-      errs() << "\n";
-    } else {
-      errs() << " no caller\n";
-    }
-    ++stackSeek;
-    ++stack_idx;
-  }
-  std::cerr << std::endl;
+  // if (i->getParent()->getParent()->getName().find("mpi_sub_hlp") != std::string::npos) {
+  //
+    // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+    // << i->getParent()->getParent()->getName() << "\n";
+    // std::string srcFile = ki->info->file;
+    // if (srcFile.length() > 42)
+    // srcFile = srcFile.substr(42);
+    // llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
+  // }
+
+  // std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+  // std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+  // int stack_idx = 0;
+  // errs() << "asm line " << ki->info->assemblyLine << "\n";
+  // while (stackSeek != stackEnd) {
+  //   errs() << "stack idx " << stack_idx << " in ";
+  //   errs() << stackSeek->kf->function->getName();
+  //   if (stackSeek->caller) {
+  //     errs() << " line " << stackSeek->caller->info->assemblyLine;
+  //     errs() << "\n";
+  //   } else {
+  //     errs() << " no caller\n";
+  //   }
+  //   ++stackSeek;
+  //   ++stack_idx;
+  // }
+  // std::cerr << std::endl;
 
 
 
@@ -1755,7 +1843,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     Instruction *caller = kcaller ? kcaller->inst : 0;
 
-    Inception::AsmJIT::check_context(caller);
+    // Inception::AsmJIT::check_context(caller);
 
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
@@ -2006,6 +2094,33 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Invoke:
   case Instruction::Call: {
+    // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
+    // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+    //              << i->getParent()->getParent()->getName() << "\n";
+    // std::string srcFile = ki->info->file;
+    // if (srcFile.length() > 42) {
+    //   srcFile = srcFile.substr(42);
+    // }
+    // llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile
+    //              << "\n";
+    //
+    // std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+    // std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+    // int stack_idx = 0;
+    // errs() << "asm line " << ki->info->assemblyLine << "\n";
+    // while (stackSeek != stackEnd) {
+    //   errs() << "stack idx " << stack_idx << " in ";
+    //   errs() << stackSeek->kf->function->getName();
+    //   if (stackSeek->caller) {
+    //     errs() << " line " << stackSeek->caller->info->assemblyLine;
+    //     errs() << "\n";
+    //   } else {
+    //     errs() << " no caller\n";
+    //   }
+    //   ++stackSeek;
+    //   ++stack_idx;
+    // }
+    // std::cerr << std::endl;
     CallSite cs(i);
 
     unsigned numArgs = cs.arg_size();
@@ -2017,14 +2132,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (f && isDebugIntrinsic(f, kmodule))
       break;
 
-    if( f->isIntrinsic() )
-      break;
-
-    if (f)
-      std::cout << "[Klee] Calling function " << f->getName().str()
-                << std::endl;
-    else
-      std::cout << "[Klee] Calling function through indirect call" << std::endl;
+    // if (f)
+      // std::cout << "[Klee] Calling function " << f->getName().str()
+                // << std::endl;
+    // else
+      // std::cout << "[Klee] Calling function through indirect call" << std::endl;
 
     // evaluate arguments
     std::vector<ref<Expr> > arguments;
@@ -2060,8 +2172,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         * Need to generate assembly call for special instruction which needs
         * the
         */
-        std::vector<KInstruction *> new_kis = Inception::AsmJIT::parse_block(
-            assembly, state, ki, kmodule, arguments, i);
+        // std::vector<KInstruction *> new_kis = Inception::AsmJIT::parse_block(
+            // assembly, state, ki, kmodule, arguments, i);
 
         // if(new_kis.size()<=0)
           // return;
@@ -2070,13 +2182,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // i = ki->inst;
           // state.pc = new_kis.data();
 //
-        for (std::vector<KInstruction *>::iterator ib = new_kis.begin(),
-                                                   ie = new_kis.end();
-             ib != ie; ib++) {
-
-               executeInstruction(state, *ib);
-              //  executeCall(state, *ib, f, arguments);
-             }
+        // for (std::vector<KInstruction *>::iterator ib = new_kis.begin(),
+        //                                            ie = new_kis.end();
+        //      ib != ie; ib++) {
+        //
+        //        executeInstruction(state, *ib);
+        //       //  executeCall(state, *ib, f, arguments);
+        //      }
 
         return;
       } catch (const std::invalid_argument &ia) {
@@ -3684,10 +3796,10 @@ void Executor::executeMemoryOperation(
   if (addr_ce != NULL) {
     uint64_t concrete_address = addr_ce->getZExtValue();
 
-    std::cout << "[Klee] Memory operation at addr 0x" << std::hex
-              << concrete_address << std::endl;
-
     if (Inception::RealMemory::is_real(concrete_address) == true) {
+
+      // std::cout << "[Inception] Real memory operation at addr 0x" << std::hex
+                // << concrete_address << std::endl;
 
       if (isWrite) {
 
