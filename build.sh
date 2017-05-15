@@ -4,8 +4,8 @@ CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
             --enable-posix-runtime \
             --with-llvmsrc=../tools/llvm/llvm-3.4 \
             --with-llvmobj=../tools/llvm/llvm-3.4 \
-            --with-llvmcc=../tools/llvm/clang-3.4/build/bin/clang \
-            --with-llvmcxx=../tools/clang-3.4/build/bin/clang++ \
+            --with-llvmcc=../tools/llvm/llvm3.4/build/bin/clang \
+            --with-llvmcxx=../tools/llvm/llvm3.4/build/bin/clang++ \
             --with-uclibc=../tools/klee-uclibc \
 	    --with-runtime='Debug+Asserts'
 
