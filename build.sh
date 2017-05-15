@@ -1,12 +1,12 @@
 CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
 	    --enable-cxx11 \
-	    --with-stp=/home/enoname/Tools/stp/build \
+	    --with-stp=../tools/stp/build \
             --enable-posix-runtime \
-            --with-llvmsrc=/home/enoname/Tools/llvm/llvm-3.4 \
-            --with-llvmobj=/home/enoname/Tools/llvm/llvm-3.4 \
-            --with-llvmcc=/home/enoname/Tools/clang/build/bin/clang \
-            --with-llvmcxx=/home/enoname/Tools/clang/build/bin/clang++ \
-            --with-uclibc=/home/enoname/Tools/klee-uclibc \
+            --with-llvmsrc=../tools/llvm/llvm-3.4 \
+            --with-llvmobj=../tools/llvm/llvm-3.4 \
+            --with-llvmcc=../tools/llvm/clang-3.4/build/bin/clang \
+            --with-llvmcxx=../tools/clang-3.4/build/bin/clang++ \
+            --with-uclibc=../tools/klee-uclibc \
 	    --with-runtime='Debug+Asserts'
 
 if [ $? != 0 ]; then
