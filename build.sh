@@ -1,13 +1,13 @@
 CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
-	    --enable-cxx11 \
-	    --with-stp=../tools/stp/build \
+            --enable-cxx11 \
+            --with-stp=../tools/stp/build \
             --enable-posix-runtime \
-            --with-llvmsrc=../tools/llvm/llvm-3.4 \
-            --with-llvmobj=../tools/llvm/llvm-3.4 \
+            --with-llvmsrc=../tools/llvm/llvm3.4 \
+            --with-llvmobj=../tools/llvm/llvm3.4 \
             --with-llvmcc=../tools/llvm/llvm3.4/build/bin/clang \
             --with-llvmcxx=../tools/llvm/llvm3.4/build/bin/clang++ \
             --with-uclibc=../tools/klee-uclibc \
-	    --with-runtime='Debug+Asserts'
+            --with-runtime='Debug+Asserts'
 
 if [ $? != 0 ]; then
         echo "FAIL to configure Klee !"
