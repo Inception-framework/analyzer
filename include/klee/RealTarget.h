@@ -18,24 +18,33 @@
 extern "C" {
 #endif
 
-extern void *jtag_init(void);
+#ifndef WATCHER
+#define WATCHER
+typedef void (*Watcher)(int);
+#endif
 
-extern int32_t jtag_read(void *opaque, uint64_t address, uint64_t *value,
-  unsigned size);
+void *jtag_init(void);
 
-extern uint64_t jtag_read_u32(void *opaque, uint64_t address);
+int32_t jtag_read(void *opaque, uint64_t address, uint64_t *value,
+                  unsigned size);
 
-extern void jtag_write(void *opaque, uint64_t address, uint64_t value, unsigned size);
+uint64_t jtag_read_u32(void *opaque, uint64_t address);
 
-extern void benchmark_start(void);
+void jtag_write(void *opaque, uint64_t address, uint64_t value, unsigned size);
 
-extern void benchmark_stop(void);
+void benchmark_start(void);
 
-extern void benchmark_to_string(void);
+void benchmark_stop(void);
 
-extern void benckmark_inc_nread(void);
+void benchmark_to_string(void);
 
-extern void benckmark_inc_nwrite(void);
+void benckmark_inc_nread(void);
+
+void benckmark_inc_nwrite(void);
+
+void load_binary_in_sdram(void *opaque, char* file_path, uint32_t address);
+
+void trace_init(void *opaque, Watcher watcher);
 
 #if defined(__cplusplus)
 }
@@ -54,11 +63,11 @@ namespace Inception {
 
 class RealTarget {
 
+  public :
+
   RealTarget();
 
   ~RealTarget();
-
-public :
 
   static void* inception_device;
 

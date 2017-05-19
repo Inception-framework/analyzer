@@ -1,21 +1,6 @@
 #ifndef REAL_INTERRUPT_H
 #define REAL_INTERRUPT_H
 
-#ifndef WATCHER
-#define WATCHER
-typedef void (*Watcher)(int);
-#endif
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-void trace_init(void *opaque, Watcher watcher);
-
-#if defined(__cplusplus)
-}
-#endif
-
 // #include "klee/Internal/Module/KInstIterator.h"
 
 #include "stdlib.h"
