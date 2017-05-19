@@ -1,6 +1,21 @@
 #ifndef REAL_INTERRUPT_H
 #define REAL_INTERRUPT_H
 
+#ifndef WATCHER
+#define WATCHER
+typedef void (*Watcher)(int);
+#endif
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+void trace_init(void *opaque, Watcher watcher);
+
+#if defined(__cplusplus)
+}
+#endif
+
 // #include "klee/Internal/Module/KInstIterator.h"
 
 #include "stdlib.h"
@@ -63,13 +78,15 @@ namespace Inception{
 
     ~RealInterrupt();
 
+    static void init();
+
     static bool is_up(void);
 
     static Function* next_int_function(void);
 
     static void AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority);
 
-    static void raise(uint32_t id);
+    static void raise(int id);
 
   private:
 

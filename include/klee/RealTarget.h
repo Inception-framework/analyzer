@@ -58,9 +58,9 @@ class RealTarget {
 
   ~RealTarget();
 
-  static void* inception_device;
-
 public :
+
+  static void* inception_device;
 
   static ref<Expr> read(uint64_t address, uint64_t *value, Expr::Width w);
 

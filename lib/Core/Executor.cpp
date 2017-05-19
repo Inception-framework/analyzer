@@ -41,9 +41,9 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Interpreter.h"
 #include "klee/RealContextSaver.h"
+#include "klee/RealTarget.h"
 #include "klee/RealInterrupt.h"
 #include "klee/RealMemory.h"
-#include "klee/RealTarget.h"
 #include "klee/SolverStats.h"
 #include "klee/TimerStatIncrementer.h"
 #include "klee/util/Assignment.h"
@@ -347,13 +347,16 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString) {
 
+  Inception::RealInterrupt::init();
 
   // Inception::RealMemory::add_submemory(0x40050000, 0xCC,
   //                                  new std::string("CGU"));
 
-  Inception::RealMemory::add_submemory(0xE000ED00, 0xE0,
+  Inception::RealMemory::add_submemory(0xE000ED00, 0xE4,
                                   new std::string("SCU"));
 
+  Inception::RealMemory::add_submemory(0xE000E100, 0xE04,
+                               new std::string("NVIC"));
 
   // Inception::RealMemory::add_submemory(0x20000000, 0x40000,
   //                                      new std::string("SRAM"));
@@ -363,8 +366,8 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
   // Inception::RealMemory::add_submemory(0xE000E000, 0x5FFFF,
   //                                     new std::string("SCU"));
   //
-  // Inception::RealMemory::add_submemory(0x400F4000, 0x3FFC,
-  //                                  new std::string("HIGH_SPEED_GPIO"));
+  Inception::RealMemory::add_submemory(0x400F4000, 0x3FFC,
+                                   new std::string("HIGH_SPEED_GPIO"));
   // Inception::RealMemory::add_submemory(0x42000000, 0x1FFFFC,
   //                                 new std::string("PERIPHERAL_BIT_BAND_ALIAS_REGION"));
   // Inception::RealMemory::add_submemory(0x80000000, 0x7FFFFFC,
@@ -1713,10 +1716,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
     // << i->getParent()->getParent()->getName() << "\n";
-    std::string srcFile = ki->info->file;
-    if (srcFile.length() > 42)
-    srcFile = srcFile.substr(42);
-    llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
+    // std::string srcFile = ki->info->file;
+    // if (srcFile.length() > 42)
+    // srcFile = srcFile.substr(42);
+    // llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
   // }
 
   // std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
@@ -2438,7 +2441,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
-    executeMemoryOperation(state, true, base, value, 0);
+    executeMemoryOperation(state, true, base, value, ki);
     break;
   }
 
@@ -3705,9 +3708,6 @@ void Executor::executeMemoryOperation(
 
     if (Inception::RealMemory::is_real(concrete_address) == true) {
 
-      // std::cout << "[Inception] Real memory operation at addr 0x" << std::hex
-                // << concrete_address << std::endl;
-
       if (isWrite) {
 
         ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
@@ -3718,6 +3718,13 @@ void Executor::executeMemoryOperation(
 
         // return;
         Inception::RealTarget::write(concrete_address, concrete_value, type);
+        if(target->info->line != 552 ) {
+          std::string srcFile = target->info->file;
+          if (srcFile.length() > 82)
+            srcFile = srcFile.substr(82);
+          std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+          printf("[RealWrite] *0x%08x = 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
+        }
         return;
       } else {
 
@@ -3733,6 +3740,14 @@ void Executor::executeMemoryOperation(
                                                        &concrete_value, type);
 
         bindLocal(target, state, result);
+
+        if(target->info->line != 552 ) {
+          std::string srcFile = target->info->file;
+          if (srcFile.length() > 82)
+            srcFile = srcFile.substr(82);
+          std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+          printf("[RealRead] *0x%08x -> 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
+        }
         return;
       }
     }

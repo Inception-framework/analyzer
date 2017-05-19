@@ -1,4 +1,5 @@
 #include "klee/RealInterrupt.h"
+#include "klee/RealTarget.h"
 
 namespace Inception{
 
@@ -6,7 +7,9 @@ std::map<uint32_t, Interrupt*> RealInterrupt::interrupts_vector;
 
 std::priority_queue<Interrupt*, std::vector<Interrupt*>, InterruptComparator> RealInterrupt::pending_interrupts;
 
-RealInterrupt::RealInterrupt(){
+RealInterrupt::RealInterrupt(){}
+
+void RealInterrupt::init() {
 
   AddInterrupt(StringRef("__cs3_reset"), 0, 0, 0);                 /* Reset Handler                */
   AddInterrupt(StringRef("NMI_Handler"), 1, 0, 0);                 /* NMI Handler                  */
@@ -23,6 +26,10 @@ RealInterrupt::RealInterrupt(){
   AddInterrupt(StringRef(""), 12, 0, 0);                         /* Reserved                     */
   AddInterrupt(StringRef("PendSV_Handler"), 13, 0, 0);              /* PendSV Handler               */
   AddInterrupt(StringRef("SysTick_Handler"), 14, 0, 0);             /* SysTick Handler              */
+
+  //configure trace
+  Watcher watcher = &RealInterrupt::raise;
+  trace_init(RealTarget::inception_device, watcher);
 }
 
 void RealInterrupt::AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {
@@ -30,7 +37,7 @@ void RealInterrupt::AddInterrupt(StringRef handler_name, uint32_t id, uint32_t g
   interrupts_vector.insert(std::pair<uint32_t, Interrupt*>(id, new Interrupt(handler_name, id, group_priority, internal_priority)));
 }
 
-void RealInterrupt::raise(uint32_t id) {
+void RealInterrupt::raise(int id) {
 
   /*Reorganized pending queue to */
   Interrupt* interrupt = interrupts_vector.at(id);
