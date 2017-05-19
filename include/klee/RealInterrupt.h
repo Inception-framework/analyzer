@@ -67,7 +67,7 @@ namespace Inception{
 
     static bool is_up(void);
 
-    static Function* next_int_function(void);
+    static llvm::StringRef& next_int_function(void);
 
     static void AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority);
 

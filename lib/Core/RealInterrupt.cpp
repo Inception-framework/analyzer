@@ -48,11 +48,16 @@ void RealInterrupt::raise(int id) {
 RealInterrupt::~RealInterrupt(){}
 
 bool RealInterrupt::is_up() {
-  return false;
+  return RealInterrupt::pending_interrupts.empty();
 }
 
-Function* RealInterrupt::next_int_function() {
-  return NULL;
+llvm::StringRef& RealInterrupt::next_int_function() {
+
+  Interrupt *interrupt = RealInterrupt::pending_interrupts.top();
+
+  RealInterrupt::pending_interrupts.pop();
+
+  return interrupt->handlerName;
 }
 
 }

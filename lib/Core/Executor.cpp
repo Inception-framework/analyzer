@@ -1403,7 +1403,9 @@ void Executor::stepInstruction(ExecutionState &state) {
 
 ExecutionState &Executor::interrupt(ExecutionState *state) {
 
-  Function *f_interrupt = Inception::RealInterrupt::next_int_function();
+  llvm::StringRef function_name = Inception::RealInterrupt::next_int_function();
+
+  Function *f_interrupt = kmodule->module->getFunction(function_name);
 
   ExecutionState *interruptState = state->branch();
   interruptState->interrupted = true;
