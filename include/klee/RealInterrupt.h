@@ -63,6 +63,8 @@ namespace Inception{
 
     ~RealInterrupt();
 
+    static bool interrupted;
+
     static void init();
 
     static bool is_up(void);
@@ -72,6 +74,10 @@ namespace Inception{
     static void AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority);
 
     static void raise(int id);
+
+    static bool is_interrupted();
+
+    static void stop_interrupt();
 
   private:
 

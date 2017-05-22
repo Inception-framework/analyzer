@@ -3,6 +3,8 @@
 
 namespace Inception{
 
+bool RealInterrupt::interrupted = false;
+
 std::map<uint32_t, Interrupt*> RealInterrupt::interrupts_vector;
 
 std::priority_queue<Interrupt*, std::vector<Interrupt*>, InterruptComparator> RealInterrupt::pending_interrupts;
@@ -37,8 +39,6 @@ void RealInterrupt::init() {
 
   Watcher watcher = &RealInterrupt::raise;
   trace_init(Inception::RealTarget::inception_device, watcher);
-
-  // raise(48);
 }
 
 void RealInterrupt::AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {
@@ -67,7 +67,19 @@ bool RealInterrupt::is_up() {
   }
 }
 
+void RealInterrupt::stop_interrupt() {
+
+  RealInterrupt::interrupted = false;
+}
+
+bool RealInterrupt::is_interrupted() {
+
+  return RealInterrupt::interrupted;
+}
+
 llvm::StringRef& RealInterrupt::next_int_function() {
+
+  RealInterrupt::interrupted = true;
 
   Interrupt *interrupt = RealInterrupt::pending_interrupts.top();
 
