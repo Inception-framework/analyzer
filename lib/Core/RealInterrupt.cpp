@@ -11,21 +11,24 @@ RealInterrupt::RealInterrupt(){}
 
 void RealInterrupt::init() {
 
-  AddInterrupt(StringRef("__cs3_reset"), 0, 0, 0);                 /* Reset Handler                */
-  AddInterrupt(StringRef("NMI_Handler"), 1, 0, 0);                 /* NMI Handler                  */
-  AddInterrupt(StringRef("HardFault_Handler"), 2, 0, 0);           /* Hard Fault Handler           */
-  AddInterrupt(StringRef("MemManage_Handler"), 3, 0, 0);           /* MPU Fault Handler            */
-  AddInterrupt(StringRef("BusFault_Handler"), 4, 0, 0);            /* Bus Fault Handler            */
-  AddInterrupt(StringRef("UsageFault_Handler"), 5, 0, 0);          /* Usage Fault Handler          */
-  AddInterrupt(StringRef("Sign_Value"), 6, 0, 0);                  /* Reserved                     */
-  AddInterrupt(StringRef(""), 7, 0, 0);                           /* Reserved                     */
-  AddInterrupt(StringRef(""), 8, 0, 0);                           /* Reserved                     */
-  AddInterrupt(StringRef(""), 9, 0, 0);                           /* Reserved                     */
-  AddInterrupt(StringRef("SVC_Handler"), 10, 0, 0);                 /* SVCall Handler               */
-  AddInterrupt(StringRef("DebugMon_Handler"), 11, 0, 0);            /* Debug Monitor Handler        */
-  AddInterrupt(StringRef(""), 12, 0, 0);                         /* Reserved                     */
-  AddInterrupt(StringRef("PendSV_Handler"), 13, 0, 0);              /* PendSV Handler               */
-  AddInterrupt(StringRef("SysTick_Handler"), 14, 0, 0);             /* SysTick Handler              */
+  AddInterrupt(StringRef("GINT0_IRQHandler"), 69, 0, 0);                 /* GINT0_IRQHandler                */
+  AddInterrupt(StringRef("GINT1_IRQHandler"), 70, 0, 0);                 /* GINT1_IRQHandler                */
+
+  // AddInterrupt(StringRef("__cs3_reset"), 0, 0, 0);                 /* Reset Handler                */
+  // AddInterrupt(StringRef("NMI_Handler"), 1, 0, 0);                 /* NMI Handler                  */
+  // AddInterrupt(StringRef("HardFault_Handler"), 2, 0, 0);           /* Hard Fault Handler           */
+  // AddInterrupt(StringRef("MemManage_Handler"), 3, 0, 0);           /* MPU Fault Handler            */
+  // AddInterrupt(StringRef("BusFault_Handler"), 4, 0, 0);            /* Bus Fault Handler            */
+  // AddInterrupt(StringRef("UsageFault_Handler"), 5, 0, 0);          /* Usage Fault Handler          */
+  // AddInterrupt(StringRef("Sign_Value"), 6, 0, 0);                  /* Reserved                     */
+  // AddInterrupt(StringRef(""), 7, 0, 0);                           /* Reserved                     */
+  // AddInterrupt(StringRef(""), 8, 0, 0);                           /* Reserved                     */
+  // AddInterrupt(StringRef(""), 9, 0, 0);                           /* Reserved                     */
+  // AddInterrupt(StringRef("SVC_Handler"), 10, 0, 0);                 /* SVCall Handler               */
+  // AddInterrupt(StringRef("DebugMon_Handler"), 11, 0, 0);            /* Debug Monitor Handler        */
+  // AddInterrupt(StringRef(""), 12, 0, 0);                         /* Reserved                     */
+  // AddInterrupt(StringRef("PendSV_Handler"), 13, 0, 0);              /* PendSV Handler               */
+  // AddInterrupt(StringRef("SysTick_Handler"), 14, 0, 0);             /* SysTick Handler              */
 
   //configure trace
   Watcher watcher = &RealInterrupt::raise;

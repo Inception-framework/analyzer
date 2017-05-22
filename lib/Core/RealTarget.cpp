@@ -36,7 +36,7 @@ namespace Inception {
 
       *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
 
-      printf("Read  at 0x%08x value 0x%08x \r\n", (uint32_t)address, (uint32_t)*value);
+      // printf("Read  at 0x%08x value 0x%08x \r\n", (uint32_t)address, (uint32_t)*value);
 
       return ConstantExpr::alloc(*value, Expr::Int32);
     }
@@ -47,7 +47,7 @@ namespace Inception {
     if(RealTarget::inception_device == NULL)
       RealTarget::inception_device = jtag_init();
 
-    printf("Write at 0x%08x value 0x%08x\r\n", (uint32_t)address, (uint32_t)value);
+    // printf("Write at 0x%08x value 0x%08x\r\n", (uint32_t)address, (uint32_t)value);
 
     switch (w) {
     default:
