@@ -18,6 +18,7 @@ using namespace llvm;
 
 namespace klee{
   class KInstIterator;
+  class ExecutionState;
 }
 
 namespace Inception{
@@ -78,6 +79,8 @@ namespace Inception{
     static bool is_interrupted();
 
     static void stop_interrupt();
+
+    static klee::ExecutionState* interrupt_state;
 
   private:
 

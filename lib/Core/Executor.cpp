@@ -1389,8 +1389,8 @@ void Executor::stepInstruction(ExecutionState &state) {
 
   printDebugInstructions(state);
 
-  if (statsTracker)
-    statsTracker->stepInstruction(state);
+  // if (statsTracker)
+    // statsTracker->stepInstruction(state);
 
   ++stats::instructions;
 
@@ -1403,6 +1403,9 @@ void Executor::stepInstruction(ExecutionState &state) {
 
 ExecutionState &Executor::interrupt(ExecutionState *state) {
 
+  if(Inception::RealInterrupt::is_interrupted())
+    return *Inception::RealInterrupt::interrupt_state;
+
   llvm::StringRef function_name = Inception::RealInterrupt::next_int_function();
 
   Function *f_interrupt = kmodule->module->getFunction(function_name);
@@ -1412,11 +1415,14 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
     llvm::errs() << "[RealInterrupt] Raise " << function_name << "\n";
 
   ExecutionState *interruptState = state->branch();
+  assert(interruptState);
+
+  Inception::RealInterrupt::interrupt_state = interruptState;
 
   interruptState->interrupted = true;
 
   // Add interrupt state to state searcher
-  // addedStates.push_back(interruptState);
+  addedStates.push_back(interruptState);
 
   // Set current node data to NULL
   // empty node with two children (state and interruptState)
@@ -1431,10 +1437,24 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   // bool prevOpcode = interruptState->prevPC->inst->getOpcode();
 
   KFunction *kf = kmodule->functionMap[f_interrupt];
-  state->pushFrame(interruptState->prevPC, kf);
-  state->pc = kf->instructions;
+  bool prevOpcode = interruptState->prevPC->inst->getOpcode();
 
   KInstIterator restorePC;
+  int blah;
+  switch (prevOpcode) {
+  case Instruction::Call:
+  case Instruction::Ret:
+  case Instruction::Br:
+    restorePC = interruptState->pc;
+    interruptState->pushFrame(restorePC, kf);
+    break;
+  default:
+    errs() << "will not restore to special pc\n";
+    restorePC = interruptState->prevPC;
+    ++restorePC;
+    interruptState->pushFrame(restorePC, kf);
+    break;
+  }
 
   interruptState->pc = kf->instructions;
   errs() << "setting pc to the isntrs of " << kf->function->getName() << "\n";
@@ -3142,16 +3162,20 @@ void Executor::run(ExecutionState &initialState) {
   * Main loop of symbolic engine
   */
   ExecutionState *pstate = NULL;
+  ExecutionState *lastState = NULL;
+
+  int counter = 0;
 
   while (!states.empty() && !haltExecution) {
 
-    if(!Inception::RealInterrupt::is_interrupted()) {
+    counter++;
+    if(counter == 10)
+      Inception::RealInterrupt::raise(48);
 
-      bool interrupted = Inception::RealInterrupt::is_up();
+    bool interrupted = Inception::RealInterrupt::is_up();
 
-      pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
-      : &(searcher->selectState());
-    }
+    lastState = pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
+    : &(searcher->selectState());
 
     KInstruction *ki = pstate->pc;
 

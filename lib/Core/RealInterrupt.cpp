@@ -3,6 +3,8 @@
 
 namespace Inception{
 
+klee::ExecutionState* Inception::RealInterrupt::interrupt_state = NULL;
+
 bool RealInterrupt::interrupted = false;
 
 std::map<uint32_t, Interrupt*> RealInterrupt::interrupts_vector;
