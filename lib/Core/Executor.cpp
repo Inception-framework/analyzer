@@ -1406,6 +1406,10 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   llvm::StringRef function_name = Inception::RealInterrupt::next_int_function();
 
   Function *f_interrupt = kmodule->module->getFunction(function_name);
+  if(f_interrupt == NULL)
+    klee_error("[RealInterrupt] Fail to resolve interrupt handler name : ", function_name.str().c_str());
+  else
+    llvm::errs() << "[RealInterrupt] Raise " << function_name << "\n";
 
   ExecutionState *interruptState = state->branch();
   interruptState->interrupted = true;
