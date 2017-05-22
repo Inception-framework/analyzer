@@ -32,8 +32,13 @@ void RealInterrupt::init() {
   // AddInterrupt(StringRef("SysTick_Handler"), 14, 0, 0);             /* SysTick Handler              */
 
   //configure trace
+  if(RealTarget::inception_device == NULL)
+    RealTarget::inception_device = jtag_init();
+
   Watcher watcher = &RealInterrupt::raise;
   trace_init(Inception::RealTarget::inception_device, watcher);
+
+  raise(48);
 }
 
 void RealInterrupt::AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {

@@ -1412,6 +1412,7 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
     llvm::errs() << "[RealInterrupt] Raise " << function_name << "\n";
 
   ExecutionState *interruptState = state->branch();
+
   interruptState->interrupted = true;
 
   // Add interrupt state to state searcher
@@ -1440,13 +1441,6 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   errs() << "PC is " << *interruptState->pc->inst << "\n";
 
   return *interruptState;
-
-  // Function *f_interrupt = Inception::RealInterrupt::next_int_function();
-  //
-  // ExecutionState *state = new
-  // ExecutionState(kmodule->functionMap[f_interrupt]);
-  //
-  // return *state;
 }
 
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
