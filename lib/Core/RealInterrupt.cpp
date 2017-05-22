@@ -11,8 +11,9 @@ RealInterrupt::RealInterrupt(){}
 
 void RealInterrupt::init() {
 
-  AddInterrupt(StringRef("GINT0_IRQHandler"), 69, 0, 0);                 /* GINT0_IRQHandler                */
-  AddInterrupt(StringRef("GINT1_IRQHandler"), 70, 0, 0);                 /* GINT1_IRQHandler                */
+  AddInterrupt(StringRef("GPIO0_IRQHandler"), 48, 0, 0);                 /* GINT0_IRQHandler                */
+  AddInterrupt(StringRef("GINT0_IRQHandler"), 56, 0, 0);                 /* GINT0_IRQHandler                */
+  AddInterrupt(StringRef("GINT1_IRQHandler"), 57, 0, 0);                 /* GINT1_IRQHandler                */
 
   // AddInterrupt(StringRef("__cs3_reset"), 0, 0, 0);                 /* Reset Handler                */
   // AddInterrupt(StringRef("NMI_Handler"), 1, 0, 0);                 /* NMI Handler                  */
