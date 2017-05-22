@@ -38,7 +38,7 @@ void RealInterrupt::init() {
   Watcher watcher = &RealInterrupt::raise;
   trace_init(Inception::RealTarget::inception_device, watcher);
 
-  raise(48);
+  // raise(48);
 }
 
 void RealInterrupt::AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {
