@@ -46,13 +46,20 @@ void RealInterrupt::raise(int id) {
   /*Reorganized pending queue to */
   Interrupt* interrupt = interrupts_vector.at(id);
 
+  llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
+
   pending_interrupts.push(interrupt);
 }
 
 RealInterrupt::~RealInterrupt(){}
 
 bool RealInterrupt::is_up() {
-  return !RealInterrupt::pending_interrupts.empty();
+  if(RealInterrupt::pending_interrupts.empty())
+    return false;
+  else {
+    llvm::errs() << "[RealInterrupt] Interrupt available !" << "\n";
+    return true;
+  }
 }
 
 llvm::StringRef& RealInterrupt::next_int_function() {
