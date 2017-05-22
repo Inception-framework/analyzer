@@ -1732,7 +1732,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
 
-  // if (i->getParent()->getParent()->getName().find("mpi_sub_hlp") != std::string::npos) {
+  if (i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos) {
 
     llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
     << i->getParent()->getParent()->getName() << "\n";
@@ -1740,25 +1740,25 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (srcFile.length() > 42)
     srcFile = srcFile.substr(42);
     llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
-  // }
-
-  std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
-  std::vector<StackFrame>::iterator stackEnd = state.stack.end();
-  int stack_idx = 0;
-  errs() << "asm line " << ki->info->assemblyLine << "\n";
-  while (stackSeek != stackEnd) {
-    errs() << "stack idx " << stack_idx << " in ";
-    errs() << stackSeek->kf->function->getName();
-    if (stackSeek->caller) {
-      errs() << " line " << stackSeek->caller->info->assemblyLine;
-      errs() << "\n";
-    } else {
-      errs() << " no caller\n";
+    std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+    std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+    int stack_idx = 0;
+    errs() << "asm line " << ki->info->assemblyLine << "\n";
+    while (stackSeek != stackEnd) {
+      errs() << "stack idx " << stack_idx << " in ";
+      errs() << stackSeek->kf->function->getName();
+      if (stackSeek->caller) {
+        errs() << " line " << stackSeek->caller->info->assemblyLine;
+        errs() << "\n";
+      } else {
+        errs() << " no caller\n";
+      }
+      ++stackSeek;
+      ++stack_idx;
     }
-    ++stackSeek;
-    ++stack_idx;
+    std::cerr << std::endl;
   }
-  std::cerr << std::endl;
+
 
 
 
