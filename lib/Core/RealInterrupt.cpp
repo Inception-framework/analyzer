@@ -33,7 +33,7 @@ void RealInterrupt::init() {
   // AddInterrupt(StringRef("DebugMon_Handler"), 11, 0, 0);            /* Debug Monitor Handler        */
   // AddInterrupt(StringRef(""), 12, 0, 0);                         /* Reserved                     */
   // AddInterrupt(StringRef("PendSV_Handler"), 13, 0, 0);              /* PendSV Handler               */
-  // AddInterrupt(StringRef("SysTick_Handler"), 14, 0, 0);             /* SysTick Handler              */
+ AddInterrupt(StringRef("SysTick_Handler"), 15, 0, 0);             /* SysTick Handler              */
 
   //configure trace
   if(RealTarget::inception_device == NULL)
