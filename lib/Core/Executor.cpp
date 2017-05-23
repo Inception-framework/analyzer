@@ -3795,7 +3795,7 @@ void Executor::executeMemoryOperation(
           std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
           // printf("[RealRead] *0x%08x -> 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
         }
-        rence turn;
+        return;
       }
     }
   }
