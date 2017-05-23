@@ -64,7 +64,7 @@ bool RealInterrupt::is_up() {
   if(RealInterrupt::pending_interrupts.empty())
     return false;
   else {
-    llvm::errs() << "[RealInterrupt] Interrupt available !" << "\n";
+    // llvm::errs() << "[RealInterrupt] Interrupt available !" << "\n";
     return true;
   }
 }

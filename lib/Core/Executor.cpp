@@ -358,6 +358,9 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
   Inception::RealMemory::add_submemory(0xE000E100, 0xE04,
                                new std::string("NVIC"));
 
+  Inception::RealMemory::add_submemory(0xE000E010, 0x10,
+                                new std::string("Systick"));
+
   // Inception::RealMemory::add_submemory(0x20000000, 0x40000,
   //                                      new std::string("SRAM"));
   // Inception::RealMemory::add_submemory(0x10000000, 0x100000,
@@ -1744,32 +1747,32 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
 
-  // if (i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos) {
-  //
-  //   llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
-  //   << i->getParent()->getParent()->getName() << "\n";
-  //   std::string srcFile = ki->info->file;
-  //   if (srcFile.length() > 42)
-  //   srcFile = srcFile.substr(42);
-  //   llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
-  //   std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
-  //   std::vector<StackFrame>::iterator stackEnd = state.stack.end();
-  //   int stack_idx = 0;
-  //   errs() << "asm line " << ki->info->assemblyLine << "\n";
-  //   while (stackSeek != stackEnd) {
-  //     errs() << "stack idx " << stack_idx << " in ";
-  //     errs() << stackSeek->kf->function->getName();
-  //     if (stackSeek->caller) {
-  //       errs() << " line " << stackSeek->caller->info->assemblyLine;
-  //       errs() << "\n";
-  //     } else {
-  //       errs() << " no caller\n";
-  //     }
-  //     ++stackSeek;
-  //     ++stack_idx;
-  //   }
-  //   std::cerr << std::endl;
-  // }
+  if (i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos) {
+
+    llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+    << i->getParent()->getParent()->getName() << "\n";
+    std::string srcFile = ki->info->file;
+    if (srcFile.length() > 42)
+    srcFile = srcFile.substr(42);
+    llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
+    std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+    std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+    int stack_idx = 0;
+    errs() << "asm line " << ki->info->assemblyLine << "\n";
+    while (stackSeek != stackEnd) {
+      errs() << "stack idx " << stack_idx << " in ";
+      errs() << stackSeek->kf->function->getName();
+      if (stackSeek->caller) {
+        errs() << " line " << stackSeek->caller->info->assemblyLine;
+        errs() << "\n";
+      } else {
+        errs() << " no caller\n";
+      }
+      ++stackSeek;
+      ++stack_idx;
+    }
+    std::cerr << std::endl;
+  }
 
 
 
@@ -3186,11 +3189,11 @@ void Executor::run(ExecutionState &initialState) {
 
     KInstruction *ki = pstate->pc;
 
-    std::string srcFile = ki->info->file;
-    if (srcFile.length() > 82)
-      srcFile = srcFile.substr(82);
-    std::string debug = "Ligne "+std::to_string(ki->info->line)+" of "+srcFile+"\n";
-    printf("[ExecuteInstruction] %s os state %d \n", debug.c_str(), pstate->id);
+    // std::string srcFile = ki->info->file;
+    // if (srcFile.length() > 82)
+      // srcFile = srcFile.substr(82);
+    // std::string debug = "Ligne "+std::to_string(ki->info->line)+" of "+srcFile+"\n";
+    // printf("[ExecuteInstruction] %s os state %d \n", debug.c_str(), pstate->id);
 
     stepInstruction(*pstate);
 
@@ -3767,7 +3770,7 @@ void Executor::executeMemoryOperation(
           if (srcFile.length() > 82)
             srcFile = srcFile.substr(82);
           std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-          printf("[RealWrite] *0x%08x = 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
+          // printf("[RealWrite] *0x%08x = 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
         }
         return;
       } else {
@@ -3790,9 +3793,9 @@ void Executor::executeMemoryOperation(
           if (srcFile.length() > 82)
             srcFile = srcFile.substr(82);
           std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-          printf("[RealRead] *0x%08x -> 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
+          // printf("[RealRead] *0x%08x -> 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
         }
-        return;
+        rence turn;
       }
     }
   }
