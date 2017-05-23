@@ -1422,7 +1422,7 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   interruptState->interrupted = true;
 
   // Add interrupt state to state searcher
-  addedStates.push_back(interruptState);
+  // addedStates.push_back(interruptState);
 
   // Set current node data to NULL
   // empty node with two children (state and interruptState)
@@ -1440,25 +1440,32 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   bool prevOpcode = interruptState->prevPC->inst->getOpcode();
 
   KInstIterator restorePC;
-  int blah;
+
   switch (prevOpcode) {
   case Instruction::Call:
   case Instruction::Ret:
   case Instruction::Br:
-    restorePC = interruptState->pc;
+    restorePC = state->prevPC;
     interruptState->pushFrame(restorePC, kf);
     break;
   default:
     errs() << "will not restore to special pc\n";
-    restorePC = interruptState->prevPC;
+    restorePC = state->prevPC;
     ++restorePC;
     interruptState->pushFrame(restorePC, kf);
     break;
   }
 
   interruptState->pc = kf->instructions;
-  errs() << "setting pc to the isntrs of " << kf->function->getName() << "\n";
+  errs() << "setting pc to the instructions of " << kf->function->getName() << "\n";
   errs() << "PC is " << *interruptState->pc->inst << "\n";
+  errs() << "PC back is " << *state->pc->inst << "\n";
+
+  std::string srcFile = state->pc->info->file;
+  if (srcFile.length() > 82)
+    srcFile = srcFile.substr(82);
+  std::string debug = "Ligne "+std::to_string(state->pc->info->line)+" of "+srcFile+"\n";
+  printf("[InterruptWhen] %s", debug.c_str());
 
   return *interruptState;
 }
@@ -1732,33 +1739,32 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
 
-  if (i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos) {
-
-    llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
-    << i->getParent()->getParent()->getName() << "\n";
-    std::string srcFile = ki->info->file;
-    if (srcFile.length() > 42)
-    srcFile = srcFile.substr(42);
-    llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
-    std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
-    std::vector<StackFrame>::iterator stackEnd = state.stack.end();
-    int stack_idx = 0;
-    errs() << "asm line " << ki->info->assemblyLine << "\n";
-    while (stackSeek != stackEnd) {
-      errs() << "stack idx " << stack_idx << " in ";
-      errs() << stackSeek->kf->function->getName();
-      if (stackSeek->caller) {
-        errs() << " line " << stackSeek->caller->info->assemblyLine;
-        errs() << "\n";
-      } else {
-        errs() << " no caller\n";
-      }
-      ++stackSeek;
-      ++stack_idx;
-    }
-    std::cerr << std::endl;
-  }
-
+  // if (i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos) {
+  //
+  //   llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+  //   << i->getParent()->getParent()->getName() << "\n";
+  //   std::string srcFile = ki->info->file;
+  //   if (srcFile.length() > 42)
+  //   srcFile = srcFile.substr(42);
+  //   llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
+  //   std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+  //   std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+  //   int stack_idx = 0;
+  //   errs() << "asm line " << ki->info->assemblyLine << "\n";
+  //   while (stackSeek != stackEnd) {
+  //     errs() << "stack idx " << stack_idx << " in ";
+  //     errs() << stackSeek->kf->function->getName();
+  //     if (stackSeek->caller) {
+  //       errs() << " line " << stackSeek->caller->info->assemblyLine;
+  //       errs() << "\n";
+  //     } else {
+  //       errs() << " no caller\n";
+  //     }
+  //     ++stackSeek;
+  //     ++stack_idx;
+  //   }
+  //   std::cerr << std::endl;
+  // }
 
 
 
@@ -1769,9 +1775,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     ReturnInst *ri = cast<ReturnInst>(i);
 
+    bool interrupted = false;
+
     if(ri)
-      if(Inception::RealInterrupt::is_interrupted())
+      if(Inception::RealInterrupt::is_interrupted()) {
+        interrupted = true;
         Inception::RealInterrupt::stop_interrupt();
+      }
 
     KInstIterator kcaller = state.stack.back().caller;
 
@@ -1835,7 +1845,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // We check that the return value has no users instead of
         // checking the type, since C defaults to returning int for
         // undeclared functions.
-        if (!caller->use_empty()) {
+        if (!caller->use_empty() && !interrupted) {
           terminateStateOnExecError(
               state, "return void when caller expected a result");
         }
@@ -3168,9 +3178,9 @@ void Executor::run(ExecutionState &initialState) {
 
   while (!states.empty() && !haltExecution) {
 
-    counter++;
-    if(counter == 10)
-      Inception::RealInterrupt::raise(48);
+    // counter++;
+    // if(counter == 10)
+    //   Inception::RealInterrupt::raise(48);
 
     bool interrupted = Inception::RealInterrupt::is_up();
 
@@ -3178,6 +3188,12 @@ void Executor::run(ExecutionState &initialState) {
     : &(searcher->selectState());
 
     KInstruction *ki = pstate->pc;
+
+    std::string srcFile = ki->info->file;
+    if (srcFile.length() > 82)
+      srcFile = srcFile.substr(82);
+    std::string debug = "Ligne "+std::to_string(ki->info->line)+" of "+srcFile+"\n";
+    printf("[ExecuteInstruction] %s os state %d ", debug.c_str(), pstate->id);
 
     stepInstruction(*pstate);
 
