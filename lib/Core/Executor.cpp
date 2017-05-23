@@ -1403,8 +1403,13 @@ void Executor::stepInstruction(ExecutionState &state) {
 
 ExecutionState &Executor::interrupt(ExecutionState *state) {
 
+  printf("\n[Interrupt] State %d \n", state->id);
+
   if(Inception::RealInterrupt::is_interrupted())
     return *Inception::RealInterrupt::interrupt_state;
+
+  // if(Inception::RealInterrupt::interrupt_state == state)
+    // return *Inception::RealInterrupt::interrupt_state;
 
   llvm::StringRef function_name = Inception::RealInterrupt::next_int_function();
 
@@ -1457,15 +1462,15 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   }
 
   interruptState->pc = kf->instructions;
-  errs() << "setting pc to the instructions of " << kf->function->getName() << "\n";
-  errs() << "PC is " << *interruptState->pc->inst << "\n";
-  errs() << "PC back is " << *state->pc->inst << "\n";
+  // errs() << "setting pc to the instructions of " << kf->function->getName() << "\n";
+  // errs() << "PC is " << *interruptState->pc->inst << "\n";
+  // errs() << "PC back is " << *state->pc->inst << "\n";
 
-  std::string srcFile = state->pc->info->file;
-  if (srcFile.length() > 82)
-    srcFile = srcFile.substr(82);
-  std::string debug = "Ligne "+std::to_string(state->pc->info->line)+" of "+srcFile+"\n";
-  printf("[InterruptWhen] %s", debug.c_str());
+  // std::string srcFile = state->pc->info->file;
+  // if (srcFile.length() > 82)
+    // srcFile = srcFile.substr(82);
+  // std::string debug = "Ligne "+std::to_string(state->pc->info->line)+" of "+srcFile+"\n";
+  // printf("[InterruptWhen] %s", debug.c_str());
 
   return *interruptState;
 }
@@ -1777,11 +1782,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bool interrupted = false;
 
-    if(ri)
-      if(Inception::RealInterrupt::is_interrupted()) {
-        interrupted = true;
-        Inception::RealInterrupt::stop_interrupt();
-      }
+    if(Inception::RealInterrupt::is_interrupted()) {
+      interrupted = true;
+      Inception::RealInterrupt::stop_interrupt();
+    }
 
     KInstIterator kcaller = state.stack.back().caller;
 
@@ -3172,19 +3176,12 @@ void Executor::run(ExecutionState &initialState) {
   * Main loop of symbolic engine
   */
   ExecutionState *pstate = NULL;
-  ExecutionState *lastState = NULL;
-
-  int counter = 0;
 
   while (!states.empty() && !haltExecution) {
 
-    // counter++;
-    // if(counter == 10)
-    //   Inception::RealInterrupt::raise(48);
-
     bool interrupted = Inception::RealInterrupt::is_up();
 
-    lastState = pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
+    pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
     : &(searcher->selectState());
 
     KInstruction *ki = pstate->pc;
@@ -3193,7 +3190,7 @@ void Executor::run(ExecutionState &initialState) {
     if (srcFile.length() > 82)
       srcFile = srcFile.substr(82);
     std::string debug = "Ligne "+std::to_string(ki->info->line)+" of "+srcFile+"\n";
-    printf("[ExecuteInstruction] %s os state %d ", debug.c_str(), pstate->id);
+    printf("[ExecuteInstruction] %s os state %d \n", debug.c_str(), pstate->id);
 
     stepInstruction(*pstate);
 
