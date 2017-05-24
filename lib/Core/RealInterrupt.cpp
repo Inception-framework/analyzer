@@ -53,7 +53,7 @@ void RealInterrupt::raise(int id) {
   /*Reorganized pending queue to */
   Interrupt* interrupt = interrupts_vector.at(id);
 
-  llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
+  // llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
 
   pending_interrupts.push(interrupt);
 }

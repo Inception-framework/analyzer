@@ -750,21 +750,19 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
       // Program already running = object already initialized.  Read
       // concrete value and write it to our copy.
-      // if (size) {
-      //   void *addr;
-      //   if (i->getName() == "__dso_handle") {
-      //     addr = &__dso_handle; // wtf ?
-      //   } else {
-      //     addr = externalDispatcher->resolveSymbol(i->getName());
-      //   }
-      //   if (!addr)
-      //     klee_warning("unable to load symbol(%s) while initializing
-      //     globals.",
-      //                i->getName().data());
-      //
-      //   for (unsigned offset = 0; offset < mo->size; offset++)
-      //     os->write8(offset, ((unsigned char *)addr)[offset]);
-      // }
+      if (size) {
+        void *addr;
+        if (i->getName() == "__dso_handle") {
+          addr = &__dso_handle; // wtf ?
+        } else {
+          addr = externalDispatcher->resolveSymbol(i->getName());
+        }
+        if (!addr)
+          klee_warning("unable to load symbol(%s) while initializing globals.", i->getName().data());
+
+        for (unsigned offset = 0; offset < mo->size; offset++)
+          os->write8(offset, ((unsigned char *)addr)[offset]);
+      }
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
@@ -814,7 +812,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
 
       initializeGlobalObject(state, wos, i->getInitializer(), 0);
-      // if(i->isConstant()) os->setReadOnly(true);
+      // if(i->isConstant())
+        // os->setReadOnly(true);
     }
   }
 }
@@ -3755,6 +3754,8 @@ void Executor::executeMemoryOperation(
 
     if (Inception::RealMemory::is_real(concrete_address) == true) {
 
+      // llvm::errs() << *target->inst << " :  \t";
+
       if (isWrite) {
 
         ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
@@ -3765,13 +3766,11 @@ void Executor::executeMemoryOperation(
 
         // return;
         Inception::RealTarget::write(concrete_address, concrete_value, type);
-        if(target->info->line != 552 ) {
-          std::string srcFile = target->info->file;
-          if (srcFile.length() > 82)
-            srcFile = srcFile.substr(82);
-          std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-          // printf("[RealWrite] *0x%08x = 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
-        }
+        // std::string srcFile = target->info->file;
+        // if (srcFile.length() > 82)
+          // srcFile = srcFile.substr(82);
+        // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+        // printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
         return;
       } else {
 
@@ -3788,13 +3787,11 @@ void Executor::executeMemoryOperation(
 
         bindLocal(target, state, result);
 
-        if(target->info->line != 552 ) {
-          std::string srcFile = target->info->file;
-          if (srcFile.length() > 82)
-            srcFile = srcFile.substr(82);
-          std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-          // printf("[RealRead] *0x%08x -> 0x%08x, %s",concrete_address, concrete_value, debug.c_str());
-        }
+        // std::string srcFile = target->info->file;
+        // if (srcFile.length() > 82)
+          // srcFile = srcFile.substr(82);
+        // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+        // printf("[RealRead] *0x%08x -> 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
         return;
       }
     }

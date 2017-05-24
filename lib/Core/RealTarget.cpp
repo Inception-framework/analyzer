@@ -23,21 +23,21 @@ namespace Inception {
 
     switch (w) {
     default:
-      assert(0 && "invalid width");
+      assert(0 && "RealTarget called with an invalid width");
     case Expr::Bool:
-    case Expr::Int8:
     case Expr::Int16:
     case Expr::Int64:
 
       printf(" [ERROR] Unable to perform real read... unexpected size ...\r\n");
       throw std::runtime_error("Unexpected type when redirecting IO to the real target");
 
+    case Expr::Int8:
+      *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
+      return ConstantExpr::alloc(*value, Expr::Int8);
     case Expr::Int32:
 
-      *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
-
       // printf("Read  at 0x%08x value 0x%08x \r\n", (uint32_t)address, (uint32_t)*value);
-
+      *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
       return ConstantExpr::alloc(*value, Expr::Int32);
     }
   }
@@ -54,22 +54,18 @@ namespace Inception {
       assert(0 && "invalid width");
     case Expr::Bool:
       printf(" [ERROR] Expr::Bool\r\n");
-    case Expr::Int8:
-      printf(" [ERROR] Expr::Int8\r\n");
     case Expr::Int16:
       printf(" [ERROR] Expr::Int16\r\n");
     case Expr::Int64:
       printf(" [ERROR] Expr::Int64\r\n");
 
       printf(" [ERROR] Unable to perform real read... unexpected size ...\r\n");
-      // throw std::runtime_error( "Unexpected type when redirecting IO to the real target" );
+      throw std::runtime_error("Unexpected type when redirecting IO to the real target");
+    case Expr::Int8:
       jtag_write(RealTarget::inception_device, address, value, 32);
-
       return;
     case Expr::Int32:
-
       jtag_write(RealTarget::inception_device, address, value, 32);
-
       // printf(" [*] Inception performed a write U32");
       return;
     }
