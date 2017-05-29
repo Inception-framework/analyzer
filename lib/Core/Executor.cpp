@@ -3143,12 +3143,12 @@ void Executor::run(ExecutionState &initialState) {
   */
   ExecutionState *pstate = NULL;
 
-  unsigned CycleCoutner = 0;
+  // unsigned CycleCoutner = 0;
 
   while (!states.empty() && !haltExecution) {
 
-    if(CycleCoutner++ == 100)
-      Inception::RealInterrupt::raise(15);
+    // if(CycleCoutner++ == 100)
+      // Inception::RealInterrupt::raise(15);
 
     bool interrupted = Inception::RealInterrupt::is_up();
 
@@ -3765,11 +3765,11 @@ void Executor::executeMemoryOperation(
   }
   /*Display only when Global Variable CycleCounter is accessed*/
 
-  static bool line_18655 = false;
-  static bool line_18657 = false;
+  // static bool line_18655 = false;
+  // static bool line_18657 = false;
 
-  ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-  Instruction *i = target->inst;
+  // ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+  // Instruction *i = target->inst;
 
   // std::string str;
   // llvm::raw_string_ostream rso(str);
@@ -3777,8 +3777,8 @@ void Executor::executeMemoryOperation(
   //
   // if( line_18655 == false && line_18657 == false && str.find("cycleCounter") != std::string::npos) {
   //
-    if(target->info->assemblyLine == 18655)
-      line_18655 = true;
+    // if(target->info->assemblyLine == 18655)
+      // line_18655 = true;
   //
   //   if(target->info->assemblyLine == 18657)
   //     line_18657 = true;
@@ -4095,7 +4095,7 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
   initializeGlobals(*state);
 
-  Module *m = kmodule->module;
+  // Module *m = kmodule->module;
 
   // void* stack = malloc(sizeof(char) * 0x20000);
   //
