@@ -349,46 +349,10 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
 
   Inception::RealInterrupt::init();
 
-  // Inception::RealMemory::add_submemory(0x40050000, 0xCC,
-  //                                  new std::string("CGU"));
-
-  Inception::RealMemory::add_submemory(0xE000ED00, 0xE4,
-                                  new std::string("SCU"));
-
-  Inception::RealMemory::add_submemory(0xE000E100, 0xE04,
-                               new std::string("NVIC"));
-
-  Inception::RealMemory::add_submemory(0xE000E010, 0x10,
-                                new std::string("Systick"));
-
-  // Inception::RealMemory::add_submemory(0x20000000, 0x40000,
-  //                                      new std::string("SRAM"));
-  // Inception::RealMemory::add_submemory(0x10000000, 0x100000,
-  //                                      new std::string("FLASH"));
-
-  // Inception::RealMemory::add_submemory(0xE000E000, 0x5FFFF,
-  //                                     new std::string("SCU"));
-  //
-  Inception::RealMemory::add_submemory(0x400F4000, 0x3FFC,
-                                   new std::string("HIGH_SPEED_GPIO"));
-  // Inception::RealMemory::add_submemory(0x42000000, 0x1FFFFC,
-  //                                 new std::string("PERIPHERAL_BIT_BAND_ALIAS_REGION"));
-  // Inception::RealMemory::add_submemory(0x80000000, 0x7FFFFFC,
-  //                             new std::string("SPIFI_DATA"));
-  // Inception::RealMemory::add_submemory(0xE0000000, 0x1FFFFFFF,
-  //                             new std::string("ARM_PRIVATE_BUS"));
-
-
-  // Inception::RealMemory::add_submemory(0x400E4000, 0x5FFC,
-  //                             new std::string("ADC1"));
-  // Inception::RealMemory::add_submemory(0x400E3000, 0x5FFC,
-  //                             new std::string("ADC0"));
-  // Inception::RealMemory::add_submemory(0x400E2000, 0x5FFC,
-  //                             new std::string("C_CAN0"));
-  // Inception::RealMemory::add_submemory(0x400E1000, 0x5FFC,
-  //                             new std::string("DAC"));
-  // Inception::RealMemory::add_submemory(0x400E0000, 0x5FFC,
-  //                             new std::string("I2C1"));
+  Inception::RealMemory::add_submemory(0xE000ED00, 0xE4, new std::string("SCU"));
+  Inception::RealMemory::add_submemory(0xE000E100, 0xE04, new std::string("NVIC"));
+  Inception::RealMemory::add_submemory(0xE000E010, 0x10, new std::string("Systick"));
+  Inception::RealMemory::add_submemory(0x400F4000, 0x3FFC, new std::string("HIGH_SPEED_GPIO"));
 
   Inception::RealMemory::add_submemory(0x400C7000, 0x5FFC, new std::string("GIMA"));
   Inception::RealMemory::add_submemory(0x400C6000, 0x5FFC, new std::string("QEI"));
@@ -705,10 +669,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(), e = m->global_end();
        i != e; ++i) {
 
-    //  klee_warning("Loading symbol(%s); size=%d; type=0x%02x.",
-    // i->getName().data(),
-    // i->getName().size(),
-    // i->getType()->getElementType()->getTypeID());
+     klee_warning("Loading symbol(%s); size=%d; type=0x%02x.",
+    i->getName().data(),
+    i->getName().size(),
+    i->getType()->getElementType()->getTypeID());
 
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
@@ -1427,13 +1391,13 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   Inception::RealInterrupt::interrupt_state = interruptState;
 
   interruptState->interrupted = true;
-
+  interruptState->addressSpace.cowKey = state->addressSpace.cowKey;
   // Add interrupt state to state searcher
   // addedStates.push_back(interruptState);
 
   // Set current node data to NULL
   // empty node with two children (state and interruptState)
-  state->ptreeNode->data = 0;
+  // state->ptreeNode->data = 0;
 
   std::pair<PTree::Node *, PTree::Node *> res =
       processTree->split(state->ptreeNode, interruptState, state);
@@ -3179,7 +3143,12 @@ void Executor::run(ExecutionState &initialState) {
   */
   ExecutionState *pstate = NULL;
 
+  unsigned CycleCoutner = 0;
+
   while (!states.empty() && !haltExecution) {
+
+    if(CycleCoutner++ == 100)
+      Inception::RealInterrupt::raise(15);
 
     bool interrupted = Inception::RealInterrupt::is_up();
 
@@ -3764,11 +3733,10 @@ void Executor::executeMemoryOperation(
         ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
         uint64_t concrete_value = value_ce->getZExtValue();
 
-        // return;
         Inception::RealTarget::write(concrete_address, concrete_value, type);
         // std::string srcFile = target->info->file;
         // if (srcFile.length() > 82)
-          // srcFile = srcFile.substr(82);
+        //   srcFile = srcFile.substr(82);
         // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
         // printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
         return;
@@ -3784,18 +3752,42 @@ void Executor::executeMemoryOperation(
 
         ref<Expr> result = Inception::RealTarget::read(concrete_address,
                                                        &concrete_value, type);
-
         bindLocal(target, state, result);
 
         // std::string srcFile = target->info->file;
         // if (srcFile.length() > 82)
-          // srcFile = srcFile.substr(82);
+        //   srcFile = srcFile.substr(82);
         // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
         // printf("[RealRead] *0x%08x -> 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
         return;
       }
     }
   }
+  /*Display only when Global Variable CycleCounter is accessed*/
+
+  static bool line_18655 = false;
+  static bool line_18657 = false;
+
+  ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+  Instruction *i = target->inst;
+
+  // std::string str;
+  // llvm::raw_string_ostream rso(str);
+  // i->print(rso);
+  //
+  // if( line_18655 == false && line_18657 == false && str.find("cycleCounter") != std::string::npos) {
+  //
+    if(target->info->assemblyLine == 18655)
+      line_18655 = true;
+  //
+  //   if(target->info->assemblyLine == 18657)
+  //     line_18657 = true;
+  //
+  //   errs() << "Global at address 0x" \
+  //   << address_ce <<"asm line " \
+  //   << target->info->assemblyLine \
+  //   << " AddressSpace : " << &state.addressSpace << "\n\n";
+  // }
 
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
@@ -3827,8 +3819,7 @@ void Executor::executeMemoryOperation(
 
     bool inBounds;
     solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mustBeTrue(
-        state, mo->getBoundsCheckOffset(offset, bytes), inBounds);
+    bool success = solver->mustBeTrue(state, mo->getBoundsCheckOffset(offset, bytes), inBounds);
     solver->setTimeout(0);
     if (!success) {
       state.pc = state.prevPC;
