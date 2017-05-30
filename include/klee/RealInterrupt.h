@@ -40,6 +40,7 @@ namespace Inception{
       uint32_t group_priority;
 
       uint32_t internal_priority;
+
   };
 
   class InterruptComparator{
@@ -81,6 +82,8 @@ namespace Inception{
     static void stop_interrupt();
 
     static klee::ExecutionState* interrupt_state;
+
+    static llvm::Function* caller;
 
   private:
 

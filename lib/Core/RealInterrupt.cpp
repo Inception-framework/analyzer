@@ -11,6 +11,8 @@ std::map<uint32_t, Interrupt*> RealInterrupt::interrupts_vector;
 
 std::priority_queue<Interrupt*, std::vector<Interrupt*>, InterruptComparator> RealInterrupt::pending_interrupts;
 
+llvm::Function* RealInterrupt::caller = NULL;
+
 RealInterrupt::RealInterrupt(){}
 
 void RealInterrupt::init() {
@@ -72,6 +74,8 @@ bool RealInterrupt::is_up() {
 void RealInterrupt::stop_interrupt() {
 
   RealInterrupt::interrupted = false;
+
+  llvm::errs() << "[RealInterrupt] Return from interrupt ...\n\n";
 }
 
 bool RealInterrupt::is_interrupted() {

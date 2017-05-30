@@ -1377,6 +1377,8 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
   // if(Inception::RealInterrupt::interrupt_state == state)
     // return *Inception::RealInterrupt::interrupt_state;
 
+  Inception::RealInterrupt::caller = state->pc->inst->getParent()->getParent();
+
   llvm::StringRef function_name = Inception::RealInterrupt::next_int_function();
 
   Function *f_interrupt = kmodule->module->getFunction(function_name);
@@ -1709,8 +1711,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
 
   // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
+  // bool a = i->getParent()->getParent()->getName().find("GPIO_ClearValue") != std::string::npos;
+  bool b = i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos;
 
-  if (i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos) {
+  if (b) {
 
     llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
     << i->getParent()->getParent()->getName() << "\n";
@@ -1748,15 +1752,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bool interrupted = false;
 
-    if(Inception::RealInterrupt::is_interrupted()) {
-      interrupted = true;
-      Inception::RealInterrupt::stop_interrupt();
-    }
-
     KInstIterator kcaller = state.stack.back().caller;
 
     Instruction *caller = kcaller ? kcaller->inst : 0;
 
+    if(Inception::RealInterrupt::is_interrupted()) {
+      if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
+        Inception::RealInterrupt::caller == NULL;
+        interrupted = true;
+        Inception::RealInterrupt::stop_interrupt();
+      }
+    }
     // Inception::AsmJIT::check_context(caller);
 
     bool isVoidReturn = (ri->getNumOperands() == 0);
@@ -3150,7 +3156,7 @@ void Executor::run(ExecutionState &initialState) {
     // if(CycleCoutner++ == 100)
       // Inception::RealInterrupt::raise(15);
 
-    bool interrupted = Inception::RealInterrupt::is_up();
+    bool interrupted = Inception::RealInterrupt::is_up() || Inception::RealInterrupt::is_interrupted();
 
     pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
     : &(searcher->selectState());
