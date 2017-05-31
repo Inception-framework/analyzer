@@ -1371,9 +1371,6 @@ ExecutionState &Executor::interrupt(ExecutionState *state) {
 
   // printf("\n[Interrupt] State %d \n", state->id);
 
-  if(Inception::RealInterrupt::is_interrupted())
-    return *Inception::RealInterrupt::interrupt_state;
-
   // if(Inception::RealInterrupt::interrupt_state != state)
     // return *Inception::RealInterrupt::interrupt_state;
 
@@ -1715,30 +1712,30 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   // bool b = i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos;
   //
   // if (b) {
-  //
-  //   llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
-  //   << i->getParent()->getParent()->getName() << "\n";
-  //   std::string srcFile = ki->info->file;
-  //   if (srcFile.length() > 42)
-  //   srcFile = srcFile.substr(42);
-  //   llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
-  //   std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
-  //   std::vector<StackFrame>::iterator stackEnd = state.stack.end();
-  //   int stack_idx = 0;
-  //   errs() << "asm line " << ki->info->assemblyLine << "\n";
-  //   while (stackSeek != stackEnd) {
-  //     errs() << "stack idx " << stack_idx << " in ";
-  //     errs() << stackSeek->kf->function->getName();
-  //     if (stackSeek->caller) {
-  //       errs() << " line " << stackSeek->caller->info->assemblyLine;
-  //       errs() << "\n";
-  //     } else {
-  //       errs() << " no caller\n";
-  //     }
-  //     ++stackSeek;
-  //     ++stack_idx;
+
+  // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+  // << i->getParent()->getParent()->getName() << "\n";
+  // std::string srcFile = ki->info->file;
+  // if (srcFile.length() > 42)
+  // srcFile = srcFile.substr(42);
+  // llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
+  // std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+  // std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+  // int stack_idx = 0;
+  // errs() << "asm line " << ki->info->assemblyLine << "\n";
+  // while (stackSeek != stackEnd) {
+  //   errs() << "stack idx " << stack_idx << " in ";
+  //   errs() << stackSeek->kf->function->getName();
+  //   if (stackSeek->caller) {
+  //     errs() << " line " << stackSeek->caller->info->assemblyLine;
+  //     errs() << "\n";
+  //   } else {
+  //     errs() << " no caller\n";
   //   }
-  //   std::cerr << std::endl;
+  //   ++stackSeek;
+  //   ++stack_idx;
+  // }
+  // std::cerr << std::endl;
   // }
 
 
@@ -1758,7 +1755,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if(Inception::RealInterrupt::is_interrupted()) {
       if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
-        Inception::RealInterrupt::caller == NULL;
+        // Inception::RealInterrupt::caller == NULL;
         interrupted = true;
         Inception::RealInterrupt::stop_interrupt();
       }
@@ -3155,11 +3152,14 @@ void Executor::run(ExecutionState &initialState) {
 
     // if(CycleCoutner++ == 100)
       // Inception::RealInterrupt::raise(15);
+    if(Inception::RealInterrupt::is_interrupted())
+      pstate = Inception::RealInterrupt::interrupt_state;
+    else {
+      bool interrupted = Inception::RealInterrupt::is_up();
 
-    bool interrupted = Inception::RealInterrupt::is_up() || Inception::RealInterrupt::is_interrupted();
-
-    pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
-    : &(searcher->selectState());
+      pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
+      : &(searcher->selectState());
+    }
 
     KInstruction *ki = pstate->pc;
 

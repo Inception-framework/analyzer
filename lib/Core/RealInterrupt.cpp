@@ -67,8 +67,8 @@ RealInterrupt::~RealInterrupt(){}
 
 bool RealInterrupt::is_up() {
 
-  if( RealInterrupt::caller != NULL)
-    return false;
+  // if( RealInterrupt::caller != NULL)
+    // return false;
 
   if(RealInterrupt::pending_interrupts.empty())
     return false;
