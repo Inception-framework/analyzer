@@ -52,6 +52,9 @@ void RealInterrupt::AddInterrupt(StringRef handler_name, uint32_t id, uint32_t g
 
 void RealInterrupt::raise(int id) {
 
+  if(id <= 0)
+    return;
+
   /*Reorganized pending queue to */
   Interrupt* interrupt = interrupts_vector.at(id);
 
@@ -63,6 +66,10 @@ void RealInterrupt::raise(int id) {
 RealInterrupt::~RealInterrupt(){}
 
 bool RealInterrupt::is_up() {
+
+  if( RealInterrupt::caller != NULL)
+    return false;
+
   if(RealInterrupt::pending_interrupts.empty())
     return false;
   else {
@@ -72,6 +79,8 @@ bool RealInterrupt::is_up() {
 }
 
 void RealInterrupt::stop_interrupt() {
+
+  jtag_write(RealTarget::inception_device, 0x10004000, 0xAB, 32);
 
   RealInterrupt::interrupted = false;
 

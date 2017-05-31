@@ -1369,12 +1369,12 @@ void Executor::stepInstruction(ExecutionState &state) {
 
 ExecutionState &Executor::interrupt(ExecutionState *state) {
 
-  printf("\n[Interrupt] State %d \n", state->id);
+  // printf("\n[Interrupt] State %d \n", state->id);
 
   if(Inception::RealInterrupt::is_interrupted())
     return *Inception::RealInterrupt::interrupt_state;
 
-  // if(Inception::RealInterrupt::interrupt_state == state)
+  // if(Inception::RealInterrupt::interrupt_state != state)
     // return *Inception::RealInterrupt::interrupt_state;
 
   Inception::RealInterrupt::caller = state->pc->inst->getParent()->getParent();
@@ -1712,34 +1712,34 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
   // bool a = i->getParent()->getParent()->getName().find("GPIO_ClearValue") != std::string::npos;
-  bool b = i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos;
-
-  if (b) {
-
-    llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
-    << i->getParent()->getParent()->getName() << "\n";
-    std::string srcFile = ki->info->file;
-    if (srcFile.length() > 42)
-    srcFile = srcFile.substr(42);
-    llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
-    std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
-    std::vector<StackFrame>::iterator stackEnd = state.stack.end();
-    int stack_idx = 0;
-    errs() << "asm line " << ki->info->assemblyLine << "\n";
-    while (stackSeek != stackEnd) {
-      errs() << "stack idx " << stack_idx << " in ";
-      errs() << stackSeek->kf->function->getName();
-      if (stackSeek->caller) {
-        errs() << " line " << stackSeek->caller->info->assemblyLine;
-        errs() << "\n";
-      } else {
-        errs() << " no caller\n";
-      }
-      ++stackSeek;
-      ++stack_idx;
-    }
-    std::cerr << std::endl;
-  }
+  // bool b = i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos;
+  //
+  // if (b) {
+  //
+  //   llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+  //   << i->getParent()->getParent()->getName() << "\n";
+  //   std::string srcFile = ki->info->file;
+  //   if (srcFile.length() > 42)
+  //   srcFile = srcFile.substr(42);
+  //   llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
+  //   std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+  //   std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+  //   int stack_idx = 0;
+  //   errs() << "asm line " << ki->info->assemblyLine << "\n";
+  //   while (stackSeek != stackEnd) {
+  //     errs() << "stack idx " << stack_idx << " in ";
+  //     errs() << stackSeek->kf->function->getName();
+  //     if (stackSeek->caller) {
+  //       errs() << " line " << stackSeek->caller->info->assemblyLine;
+  //       errs() << "\n";
+  //     } else {
+  //       errs() << " no caller\n";
+  //     }
+  //     ++stackSeek;
+  //     ++stack_idx;
+  //   }
+  //   std::cerr << std::endl;
+  // }
 
 
 
