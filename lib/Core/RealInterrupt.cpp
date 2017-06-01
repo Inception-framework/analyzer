@@ -38,7 +38,7 @@ bool RealInterrupt::ending = false;
 
 RealInterrupt::RealInterrupt(){}
 
-void watch_and_avoid(int id) {}
+// void watch_and_avoid(int id) {}
 
 void RealInterrupt::init(klee::Executor* _executor) {
 
@@ -53,8 +53,8 @@ void RealInterrupt::init(klee::Executor* _executor) {
   if(RealTarget::inception_device == NULL)
     RealTarget::inception_device = jtag_init();
 
-  // Watcher watcher = &RealInterrupt::raise;
-  Watcher watcher = &watch_and_avoid;
+  Watcher watcher = &RealInterrupt::raise;
+  // Watcher watcher = &watch_and_avoid;
   trace_init(Inception::RealTarget::inception_device, watcher);
 }
 
