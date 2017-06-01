@@ -116,6 +116,18 @@ public:
     Unhandled
   };
 
+  KModule *getKModule() {
+    return kmodule;
+  }
+
+  ExecutionState *getExecutionState() {
+    return pstate;
+  }
+
+  PTree *getPTree() {
+    return processTree;
+  }
+
 private:
   static const char *TerminateReasonNames[];
 
@@ -124,6 +136,8 @@ private:
   ExecutionState &interrupt(ExecutionState *state);
 
   KModule *kmodule;
+  ExecutionState *pstate;
+
   InterpreterHandler *interpreterHandler;
   Searcher *searcher;
 

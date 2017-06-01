@@ -8,6 +8,7 @@
 // #include "llvm/Function.h"
 #include "llvm/IR/Function.h"
 #include "llvm/ADT/StringRef.h"
+#include "klee/Internal/Module/KModule.h"
 
 #include <iostream>
 #include "map"
@@ -19,6 +20,7 @@ using namespace llvm;
 namespace klee{
   class KInstIterator;
   class ExecutionState;
+  class Executor;
 }
 
 namespace Inception{
@@ -27,7 +29,7 @@ namespace Inception{
 
     public :
       Interrupt(llvm::StringRef _handlerName, uint32_t _id, uint32_t _group_priority, uint32_t _internal_priority) :
-        handlerName(_handlerName), id(_id), group_priority(_group_priority), internal_priority(_internal_priority) {}
+        handlerName(_handlerName), id(_id), group_priority(_group_priority), internal_priority(_internal_priority), state(0) {}
 
       Interrupt();
 
@@ -41,6 +43,7 @@ namespace Inception{
 
       uint32_t internal_priority;
 
+      klee::ExecutionState* state;
   };
 
   class InterruptComparator{
@@ -67,11 +70,9 @@ namespace Inception{
 
     static bool interrupted;
 
-    static void init();
+    static void init(klee::Executor* _executor);
 
     static bool is_up(void);
-
-    static llvm::StringRef& next_int_function(void);
 
     static void AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority);
 
@@ -81,9 +82,25 @@ namespace Inception{
 
     static void stop_interrupt();
 
+    static klee::ExecutionState* next_without_priority();
+
+    static klee::ExecutionState* next();
+
+    static bool masked();
+
+    static klee::ExecutionState* create_interrupt_state();
+
     static klee::ExecutionState* interrupt_state;
 
     static llvm::Function* caller;
+
+    static bool ending;
+
+    static Interrupt* current_interrupt;
+
+    static klee::Executor* executor;
+
+    static klee::ExecutionState* getPending();
 
   private:
 

@@ -347,8 +347,6 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString) {
 
-  Inception::RealInterrupt::init();
-
   Inception::RealMemory::add_submemory(0xE000ED00, 0xE4, new std::string("SCU"));
   Inception::RealMemory::add_submemory(0xE000E100, 0xE04, new std::string("NVIC"));
   Inception::RealMemory::add_submemory(0xE000E010, 0x10, new std::string("Systick"));
@@ -1367,79 +1365,6 @@ void Executor::stepInstruction(ExecutionState &state) {
     haltExecution = true;
 }
 
-ExecutionState &Executor::interrupt(ExecutionState *state) {
-
-  // printf("\n[Interrupt] State %d \n", state->id);
-
-  // if(Inception::RealInterrupt::interrupt_state != state)
-    // return *Inception::RealInterrupt::interrupt_state;
-
-  Inception::RealInterrupt::caller = state->pc->inst->getParent()->getParent();
-
-  llvm::StringRef function_name = Inception::RealInterrupt::next_int_function();
-
-  Function *f_interrupt = kmodule->module->getFunction(function_name);
-  if(f_interrupt == NULL)
-    klee_error("[RealInterrupt] Fail to resolve interrupt handler name : ", function_name.str().c_str());
-  else
-    llvm::errs() << "[RealInterrupt] Raise " << function_name << "\n";
-
-  ExecutionState *interruptState = state->branch();
-  assert(interruptState);
-
-  Inception::RealInterrupt::interrupt_state = interruptState;
-
-  interruptState->interrupted = true;
-  interruptState->addressSpace.cowKey = state->addressSpace.cowKey;
-  // Add interrupt state to state searcher
-  // addedStates.push_back(interruptState);
-
-  // Set current node data to NULL
-  // empty node with two children (state and interruptState)
-  // state->ptreeNode->data = 0;
-
-  std::pair<PTree::Node *, PTree::Node *> res =
-      processTree->split(state->ptreeNode, interruptState, state);
-
-  interruptState->ptreeNode = res.first;
-  state->ptreeNode = res.second;
-
-  // bool prevOpcode = interruptState->prevPC->inst->getOpcode();
-
-  KFunction *kf = kmodule->functionMap[f_interrupt];
-  bool prevOpcode = interruptState->prevPC->inst->getOpcode();
-
-  KInstIterator restorePC;
-
-  switch (prevOpcode) {
-  case Instruction::Call:
-  case Instruction::Ret:
-  case Instruction::Br:
-    restorePC = state->prevPC;
-    interruptState->pushFrame(restorePC, kf);
-    break;
-  default:
-    errs() << "will not restore to special pc\n";
-    restorePC = state->prevPC;
-    ++restorePC;
-    interruptState->pushFrame(restorePC, kf);
-    break;
-  }
-
-  interruptState->pc = kf->instructions;
-  // errs() << "setting pc to the instructions of " << kf->function->getName() << "\n";
-  // errs() << "PC is " << *interruptState->pc->inst << "\n";
-  // errs() << "PC back is " << *state->pc->inst << "\n";
-
-  // std::string srcFile = state->pc->info->file;
-  // if (srcFile.length() > 82)
-    // srcFile = srcFile.substr(82);
-  // std::string debug = "Ligne "+std::to_string(state->pc->info->line)+" of "+srcFile+"\n";
-  // printf("[InterruptWhen] %s", debug.c_str());
-
-  return *interruptState;
-}
-
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
                            std::vector<ref<Expr> > &arguments) {
   Instruction *i = ki->inst;
@@ -1712,7 +1637,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   // bool b = i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos;
   //
   // if (b) {
-
   // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
   // << i->getParent()->getParent()->getName() << "\n";
   // std::string srcFile = ki->info->file;
@@ -1736,8 +1660,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   //   ++stack_idx;
   // }
   // std::cerr << std::endl;
-  // }
-
+  //}
 
 
 
@@ -1755,7 +1678,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if(Inception::RealInterrupt::is_interrupted()) {
       if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
-        // Inception::RealInterrupt::caller == NULL;
         interrupted = true;
         Inception::RealInterrupt::stop_interrupt();
       }
@@ -3138,36 +3060,39 @@ void Executor::run(ExecutionState &initialState) {
   // The searcher implements the strategy for selecting next states
   searcher = constructUserSearcher(*this);
 
+  Inception::RealInterrupt::init(this);
+
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
   /*
   * Main loop of symbolic engine
   */
-  ExecutionState *pstate = NULL;
+  pstate = NULL;
 
-  // unsigned CycleCoutner = 0;
+  // unsigned cycleCounter = 0;
+  // std::string* last = 0;
 
   while (!states.empty() && !haltExecution) {
 
-    // if(CycleCoutner++ == 100)
-      // Inception::RealInterrupt::raise(15);
-    if(Inception::RealInterrupt::is_interrupted())
-      pstate = Inception::RealInterrupt::interrupt_state;
-    else {
-      bool interrupted = Inception::RealInterrupt::is_up();
+    // if( cycleCounter++ != 0 && (cycleCounter % 1000) == 0)
+      // Inception::RealInterrupt::raise(57);
 
-      pstate = (interrupted && pstate != NULL) ? &(interrupt(pstate))
-      : &(searcher->selectState());
+    //RealInterrupt returns the next interrupt state
+    pstate = Inception::RealInterrupt::next();
+
+    if(pstate == NULL) {
+      pstate = &(searcher->selectState());
+      if(pstate->description.empty())
+        pstate->description = "MainState";
+    }
+
+    if( last != &(pstate->description) ) {
+      last = &(pstate->description);
+      llvm::errs()<<" Executing : "<<pstate->description<<"\n";
     }
 
     KInstruction *ki = pstate->pc;
-
-    // std::string srcFile = ki->info->file;
-    // if (srcFile.length() > 82)
-      // srcFile = srcFile.substr(82);
-    // std::string debug = "Ligne "+std::to_string(ki->info->line)+" of "+srcFile+"\n";
-    // printf("[ExecuteInstruction] %s os state %d \n", debug.c_str(), pstate->id);
 
     stepInstruction(*pstate);
 

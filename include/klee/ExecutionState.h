@@ -73,6 +73,9 @@ private:
   std::map<std::string, std::string> fnAliases;
 
 public:
+
+  std::string description;
+
   // Execution - Control Flow specific
   bool interrupted;
 
