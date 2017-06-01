@@ -1677,6 +1677,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Instruction *caller = kcaller ? kcaller->inst : 0;
 
     if(Inception::RealInterrupt::is_interrupted()) {
+      llvm::errs() << " Return from  " << caller->getParent()->getParent()->getName() << "\n";
+      llvm::errs() << " Return from  " << Inception::RealInterrupt::caller->getName() << "\n";
       if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
         interrupted = true;
         Inception::RealInterrupt::stop_interrupt();

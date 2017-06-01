@@ -84,10 +84,28 @@ RealInterrupt::~RealInterrupt(){}
 
 ExecutionState* RealInterrupt::next_without_priority() {
 
-  if(RealInterrupt::pending_interrupts.empty())
-    return NULL;
-  else
-    return RealInterrupt::create_interrupt_state();
+    ExecutionState* state = NULL;
+
+    if(RealInterrupt::ending) {
+
+      if(RealInterrupt::interrupt_state == NULL)
+        throw std::runtime_error("[RealInterrupt] Can not end empty interrupt state ...");
+
+      RealInterrupt::executor->getPTree()->remove(RealInterrupt::interrupt_state->ptreeNode);
+      delete RealInterrupt::interrupt_state;
+      RealInterrupt::ending = false;
+      RealInterrupt::interrupt_state = NULL;
+      return NULL;
+    }
+
+    // Are we in an interrupt ?
+    if( RealInterrupt::is_interrupted() )
+        return RealInterrupt::interrupt_state;
+
+    if(!RealInterrupt::pending_interrupts.empty())
+      return  create_interrupt_state();
+    else
+      return NULL;
 }
 
 /*
