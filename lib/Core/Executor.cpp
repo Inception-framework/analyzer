@@ -3071,7 +3071,7 @@ void Executor::run(ExecutionState &initialState) {
   pstate = NULL;
 
   // unsigned cycleCounter = 0;
-  // std::string* last = 0;
+  std::string* last = 0;
 
   while (!states.empty() && !haltExecution) {
 
