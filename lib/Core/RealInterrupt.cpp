@@ -145,7 +145,7 @@ void RealInterrupt::stop_interrupt() {
 
   Interrupt *interrupt = RealInterrupt::current_interrupt;
 
-  jtag_write(RealTarget::inception_device, 0x10004000 + (interrupt->id * 4), 0xAB, 32);
+  jtag_write(RealTarget::inception_device, 0x10004000 + (interrupt->id * 4), 0, 32);
 
   RealInterrupt::interrupted = false;
 

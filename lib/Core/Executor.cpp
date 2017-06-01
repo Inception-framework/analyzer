@@ -3079,7 +3079,7 @@ void Executor::run(ExecutionState &initialState) {
       // Inception::RealInterrupt::raise(57);
 
     //RealInterrupt returns the next interrupt state
-    pstate = Inception::RealInterrupt::next();
+    pstate = Inception::RealInterrupt::next_without_priority();
 
     if(pstate == NULL) {
       pstate = &(searcher->selectState());
