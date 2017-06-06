@@ -1,8 +1,9 @@
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
             --enable-cxx11 \
-            --with-stp=../tools/stp/build \
+            --with-stp=$DIR/../tools/stp/ \
             --enable-posix-runtime \
             --with-llvmsrc=$DIR/../tools/llvm/llvm3.4 \
             --with-llvmobj=$DIR/../tools/llvm/llvm3.4 \
