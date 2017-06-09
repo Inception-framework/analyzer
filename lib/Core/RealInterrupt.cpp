@@ -6,6 +6,7 @@
 #include "PTree.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Module/InstructionInfoTable.h"
 #include "llvm/IR/Module.h"
 
 using namespace klee;
@@ -69,7 +70,7 @@ void RealInterrupt::raise(int id) {
   try {
     Interrupt* interrupt = interrupts_vector.at(id);
 
-    llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
+    // llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
 
     //When added the priority_queue will sort the queue
     //according to the user defined priority
@@ -88,6 +89,7 @@ ExecutionState* RealInterrupt::next_without_priority() {
     ExecutionState* state = NULL;
 
     if(RealInterrupt::ending) {
+      // printf("[RealInterrupt] ending ...\n");
 
       if(RealInterrupt::interrupt_state == NULL)
         throw std::runtime_error("[RealInterrupt] Can not end empty interrupt state ...");
@@ -101,7 +103,7 @@ ExecutionState* RealInterrupt::next_without_priority() {
 
     // Are we in an interrupt ?
     if( RealInterrupt::is_interrupted() )
-        return RealInterrupt::interrupt_state;
+      return RealInterrupt::interrupt_state;
 
     if(!RealInterrupt::pending_interrupts.empty())
       return  create_interrupt_state();
@@ -184,13 +186,25 @@ ExecutionState* RealInterrupt::create_interrupt_state() {
 
   ExecutionState *current = RealInterrupt::executor->getExecutionState();
 
+  //Save the function where we were when the interrupt occured
+  // Inception::RealInterrupt::caller = current->pc->inst->getParent()->getParent();
+
+  // bool b = Inception::RealInterrupt::caller->getName().find("klee_overshift_check") != std::string::npos;
+  bool a = current->prevPC->inst->getParent()->getParent()->getName().find("klee_overshift_check") != std::string::npos;
+
+  if (a) {
+
+    // printf("[RealInterrupt] Abort interrupt from %s ...\n", current->prevPC->inst->getParent()->getParent()->getName().str().c_str());
+    Inception::RealInterrupt::caller = NULL;
+    return NULL;
+  }
+
+  Inception::RealInterrupt::caller = current->prevPC->inst->getParent()->getParent();
+
   RealInterrupt::interrupted = true;
 
   RealInterrupt::current_interrupt = RealInterrupt::pending_interrupts.top();
   RealInterrupt::pending_interrupts.pop();
-
-  //Save the function where we were when the interrupt occured
-  Inception::RealInterrupt::caller = current->pc->inst->getParent()->getParent();
 
   //Get the handler name of the interrupt
   llvm::StringRef function_name = RealInterrupt::current_interrupt->handlerName;
@@ -198,9 +212,9 @@ ExecutionState* RealInterrupt::create_interrupt_state() {
   //Retrieve the LLVM Function
   Function *f_interrupt = RealInterrupt::executor->getKModule()->module->getFunction(function_name);
   if(f_interrupt == NULL)
-    klee_error("[RealInterrupt] Fail to resolve interrupt handler name : ", function_name.str().c_str());
-  else
-    llvm::errs() << "[RealInterrupt] Raise " << function_name << "\n";
+    klee_error("[RealInterrupt] Fail to resolve interrupt handler name : ", function_name.str());
+  // else
+    // llvm::errs() << "[RealInterrupt] Raise " << function_name << " from " << Inception::RealInterrupt::caller->getName() <<"\n";
 
   //Copy the current state
   ExecutionState *_interrupt_state = current->branch();
@@ -230,15 +244,42 @@ ExecutionState* RealInterrupt::create_interrupt_state() {
   switch (prevOpcode) {
   case Instruction::Call:
   case Instruction::Ret:
-  case Instruction::Br:
-    restorePC = current->prevPC;
-    interrupt_state->pushFrame(restorePC, kf);
+  case Instruction::Br: {
+    restorePC = interrupt_state->prevPC;
+    interrupt_state->pushFrame(interrupt_state->prevPC, kf);
+
+    // llvm::errs() << "[RealInterrupt] When executing : " << *restorePC->inst << "  "
+    // << restorePC->inst->getParent()->getParent()->getName() << "\n";
+    //
+    // std::string srcFile = restorePC->info->file;
+    // if (srcFile.length() > 42)
+    //   srcFile = srcFile.substr(42);
+    //
+    // llvm::errs() << "\t(src line: " << restorePC->info->line << " of " << srcFile << "\n";
+    // std::vector<StackFrame>::iterator stackSeek = current->stack.begin();
+    // std::vector<StackFrame>::iterator stackEnd = current->stack.end();
+    // int stack_idx = 0;
+    // errs() << "asm line " << restorePC->info->assemblyLine << "\n";
+    // while (stackSeek != stackEnd) {
+    //   errs() << "stack idx " << stack_idx << " in ";
+    //   errs() << stackSeek->kf->function->getName();
+    //
+    //   if (stackSeek->caller) {
+    //     errs() << " line " << stackSeek->caller->info->assemblyLine;
+    //     errs() << "\n";
+    //   } else {
+    //     errs() << " no caller\n";
+    //   }
+    //   ++stackSeek;
+    //   ++stack_idx;
+    // }
+
     break;
+  }
   default:
-    errs() << "will not restore to special pc\n";
-    restorePC = current->prevPC;
+    restorePC = interrupt_state->prevPC;
     ++restorePC;
-    interrupt_state->pushFrame(restorePC, kf);
+    interrupt_state->pushFrame( interrupt_state->prevPC, kf);
     break;
   }
 
