@@ -347,6 +347,9 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString) {
 
+  Inception::RealMemory::add_submemory(0x20008000, 0xFFF, new std::string("RX_ETH_BUFFER"));
+  Inception::RealMemory::add_submemory(0x20009230, 0xFFF, new std::string("TX_ETH_BUFFER"));
+
   Inception::RealMemory::add_submemory(0xE000ED00, 0xE4, new std::string("SCU"));
   Inception::RealMemory::add_submemory(0xE000E100, 0xE04, new std::string("NVIC"));
   Inception::RealMemory::add_submemory(0xE000E010, 0x10, new std::string("Systick"));
@@ -391,7 +394,7 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
   Inception::RealMemory::add_submemory(0x40042000, 0x5FFC, new std::string("POWER_MODE_CONTROL"));
   Inception::RealMemory::add_submemory(0x40041000, 0x5FFC, new std::string("BACKUP_REGISTERS"));
   Inception::RealMemory::add_submemory(0x40040000, 0x5FFC, new std::string("ALARM_TIMER"));
-  Inception::RealMemory::add_submemory(0x4001000, 0x1FFC, new std::string("ETHERNET"));
+  Inception::RealMemory::add_submemory(0x40010000, 0x1FFC, new std::string("ETHERNET"));
   Inception::RealMemory::add_submemory(0x40009000, 0x5FFC, new std::string("RESERVED"));
   Inception::RealMemory::add_submemory(0x40008000, 0x5FFC, new std::string("LCD"));
   Inception::RealMemory::add_submemory(0x40007000, 0x5FFC, new std::string("USB1"));
