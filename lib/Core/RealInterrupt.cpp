@@ -47,7 +47,8 @@ void RealInterrupt::init(klee::Executor* _executor) {
   AddInterrupt(StringRef("GPIO0_IRQHandler"), 48, 0, 0);                 /* GINT0_IRQHandler                */
   AddInterrupt(StringRef("GINT0_IRQHandler"), 56, 0, 0);                 /* GINT0_IRQHandler                */
   AddInterrupt(StringRef("GINT1_IRQHandler"), 57, 0, 0);                 /* GINT1_IRQHandler                */
-  AddInterrupt(StringRef("SysTick_Handler"), 15, 0, 0);                  /* SysTick Handler              */
+  AddInterrupt(StringRef("SysTick_Handler"), 15, 0, 0);                  /* SysTick Handler                 */
+  AddInterrupt(StringRef("ADC0_IRQHandler"), 33, 0, 0);                  /* ADC0 Handler                    */
 
   //configure trace
   if(RealTarget::inception_device == NULL)

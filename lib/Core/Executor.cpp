@@ -350,6 +350,9 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
   Inception::RealMemory::add_submemory(0x20008000, 0xFFF, new std::string("RX_ETH_BUFFER"));
   Inception::RealMemory::add_submemory(0x20009230, 0xFFF, new std::string("TX_ETH_BUFFER"));
 
+  Inception::RealMemory::add_submemory(0x400E3000, 0x5FFC, new std::string("ADC0"));
+  Inception::RealMemory::add_submemory(0x400E4000, 0x5FFC, new std::string("ADC1"));
+
   Inception::RealMemory::add_submemory(0xE000ED00, 0xE4, new std::string("SCU"));
   Inception::RealMemory::add_submemory(0xE000E100, 0xE04, new std::string("NVIC"));
   Inception::RealMemory::add_submemory(0xE000E010, 0x10, new std::string("Systick"));
