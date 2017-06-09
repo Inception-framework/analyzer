@@ -18,6 +18,8 @@ namespace Inception {
 
   ref<Expr> RealTarget::read(uint64_t address, uint64_t *value, Expr::Width w){
 
+    uint32_t b_address = 0;
+
     if(RealTarget::inception_device == NULL)
       RealTarget::inception_device = jtag_init();
 
@@ -27,14 +29,38 @@ namespace Inception {
     case Expr::Bool:
     case Expr::Int8:
 
-      *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
-      *value &= 0xFF;
+      b_address = address - (address % 4);
+
+      *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)b_address);
+
+      switch((address % 4)) {
+        case 0:
+          *value = (*value & 0xFF000000) >> 24;
+          break;
+        case 1:
+          *value = (*value & 0x00FF0000) >> 16;
+          break;
+        case 2:
+          *value = (*value & 0x0000FF00) >> 8;
+          break;
+        case 3:
+          *value = (*value & 0x000000FF);
+          break;
+      }
+
       return ConstantExpr::alloc(*value, Expr::Int8);
     case Expr::Int16:
 
-      *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
-      *value &= 0xFFFF;
-      return ConstantExpr::alloc(*value, Expr::Int8);
+      b_address = address - (address % 4);
+
+      *value = jtag_read_u32(RealTarget::inception_device, b_address);
+
+      if( address % 4 == 0 )
+        *value = (*value & 0xFFFF0000) >> 16;
+      else
+        *value &= 0x0000FFFF;
+
+      return ConstantExpr::alloc(*value, Expr::Int16);
 
     case Expr::Int32:
 
@@ -52,7 +78,7 @@ namespace Inception {
 
   void RealTarget::write(int64_t address, uint64_t value, Expr::Width w){
 
-    uint32_t new_val = 0;
+    uint32_t new_val = 0, b_address = 0;
 
     if(RealTarget::inception_device == NULL)
       RealTarget::inception_device = jtag_init();
@@ -65,17 +91,40 @@ namespace Inception {
     case Expr::Bool:
     case Expr::Int8:
 
-      new_val = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
-      new_val &= 0xFFFFFF00;
-      new_val |= (value & 0xFF);
-      jtag_write(RealTarget::inception_device, address, new_val, 32);
+      b_address = address - (address % 4);
+
+      new_val = jtag_read_u32(RealTarget::inception_device, b_address);
+
+      //Is the access memory alligned
+      switch((address % 4)) {
+        case 0:
+          new_val = (new_val & 0x000000FF) | (value << 24);
+          break;
+        case 1:
+          new_val = (new_val & 0xFF00FFFF) | ((value & 0x000000FF) << 16 );
+          break;
+        case 2:
+          new_val = (new_val & 0xFFFF00FF) | ((value & 0x000000FF) << 8 );
+          break;
+        case 3:
+          new_val = (new_val & 0xFFFFFF00) | (value & 0x000000FF);
+          break;
+      }
+
+      jtag_write(RealTarget::inception_device, b_address, new_val, 32);
       return;
     case Expr::Int16:
 
-      new_val = jtag_read_u32(RealTarget::inception_device, (uint32_t)address);
-      new_val &= 0xFFFF0000;
-      new_val |= (value & 0xFFFF);
-      jtag_write(RealTarget::inception_device, address, new_val, 32);
+      b_address = address - (address % 4);
+
+      new_val = jtag_read_u32(RealTarget::inception_device, b_address);
+      //Is the access memory alligned
+      if( address % 4 == 0 )
+        new_val = (new_val & 0x0000FFFF) | (value << 16);
+      else
+        new_val = (new_val & 0xFFFF0000) | (value & 0x0000FFFF);
+
+      jtag_write(RealTarget::inception_device, b_address, new_val, 32);
       return;
     case Expr::Int64:
       printf(" [ERROR] Expr::Int64\r\n");
