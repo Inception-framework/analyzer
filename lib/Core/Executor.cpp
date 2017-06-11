@@ -1637,11 +1637,11 @@ static inline const llvm::fltSemantics *fpWidthToSemantics(unsigned width) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
-
-  // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
-  // bool a = i->getParent()->getParent()->getName().find("GPIO_ClearValue") != std::string::npos;
-  // bool b = i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos;
-  //
+//std::string srcFile = ki->info->file;
+//if (srcFile.length() > 82)                                                                        // llvm::errs() << "[Inception]\tinstruction: " << *i << "\n";
+//  srcFile = srcFile.substr(82);                                                                   // bool a = i->getParent()->getParent()->getName().find("GPIO_ClearValue") != std::string::npos;
+//std::string debug = std::to_string(ki->info->line)+" of "+srcFile+"\n";                       // bool b = i->getParent()->getParent()->getName().find("GPIO0_IRQHandler") != std::string::npos;
+//printf("%s\n\n",debug.c_str());   //
   // if (b) {
   // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
   // << i->getParent()->getParent()->getName() << "\n";

@@ -32,18 +32,17 @@ namespace Inception {
       b_address = address - (address % 4);
 
       *value = jtag_read_u32(RealTarget::inception_device, (uint32_t)b_address);
-
       switch((address % 4)) {
-        case 0:
+        case 3:
           *value = (*value & 0xFF000000) >> 24;
           break;
-        case 1:
+        case 2:
           *value = (*value & 0x00FF0000) >> 16;
           break;
-        case 2:
+        case 1:
           *value = (*value & 0x0000FF00) >> 8;
           break;
-        case 3:
+        case 0:
           *value = (*value & 0x000000FF);
           break;
       }
@@ -54,11 +53,10 @@ namespace Inception {
       b_address = address - (address % 4);
 
       *value = jtag_read_u32(RealTarget::inception_device, b_address);
-
       if( address % 4 == 0 )
-        *value = (*value & 0xFFFF0000) >> 16;
-      else
         *value &= 0x0000FFFF;
+      else
+        *value = (*value & 0xFFFF0000) >> 16;
 
       return ConstantExpr::alloc(*value, Expr::Int16);
 
@@ -97,16 +95,16 @@ namespace Inception {
 
       //Is the access memory alligned
       switch((address % 4)) {
-        case 0:
+        case 3:
           new_val = (new_val & 0x000000FF) | (value << 24);
           break;
-        case 1:
+        case 2:
           new_val = (new_val & 0xFF00FFFF) | ((value & 0x000000FF) << 16 );
           break;
-        case 2:
+        case 1:
           new_val = (new_val & 0xFFFF00FF) | ((value & 0x000000FF) << 8 );
           break;
-        case 3:
+        case 0:
           new_val = (new_val & 0xFFFFFF00) | (value & 0x000000FF);
           break;
       }
@@ -120,9 +118,9 @@ namespace Inception {
       new_val = jtag_read_u32(RealTarget::inception_device, b_address);
       //Is the access memory alligned
       if( address % 4 == 0 )
-        new_val = (new_val & 0x0000FFFF) | (value << 16);
-      else
         new_val = (new_val & 0xFFFF0000) | (value & 0x0000FFFF);
+      else
+        new_val = (new_val & 0x0000FFFF) | (value << 16);
 
       jtag_write(RealTarget::inception_device, b_address, new_val, 32);
       return;
