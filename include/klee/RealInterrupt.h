@@ -25,6 +25,15 @@ namespace klee{
 
 namespace Inception{
 
+  #ifndef PARSER_CALLBACK
+  #define PARSER_CALLBACK
+
+  typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
+
+  typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
+
+  #endif
+
   class Interrupt{
 
     public :
@@ -74,7 +83,7 @@ namespace Inception{
 
     static bool is_up(void);
 
-    static void AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority);
+    static void AddInterrupt(std::string handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority);
 
     static void raise(int id);
 

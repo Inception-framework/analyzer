@@ -18,8 +18,17 @@ namespace Inception {
 typedef struct RealAddressSpace {
   uint64_t    base;
   uint64_t    size;
-  std::string *name;
+  std::string name;
 } RealAddressSpace;
+
+#ifndef PARSER_CALLBACK
+#define PARSER_CALLBACK
+
+typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
+
+typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
+
+#endif
 
 class RealMemory {
 
@@ -33,7 +42,9 @@ public :
   static bool is_real(uint64_t address);
 
   //Creates a submemory and return it id
-  static uint64_t add_submemory(uint64_t base, uint64_t size, std::string *name);
+  static void add_submemory(std::string name, uint32_t base, uint32_t size);
+
+  static void init();
 
   void delete_all();
 

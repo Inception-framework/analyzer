@@ -38,4 +38,4 @@ ifeq ($(HAVE_ZLIB),1)
   LIBS += -lz
 endif
 
-LIBS += -linception -lusb-1.0
+LIBS += -linception -lusb-1.0 -ljsoncpp

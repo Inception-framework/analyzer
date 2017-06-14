@@ -1,4 +1,5 @@
 #include "klee/RealMemory.h"
+#include "klee/Internal/Support/Configurator.h"
 
 #include "stdio.h"
 
@@ -9,6 +10,14 @@ std::vector<RealAddressSpace*> *RealMemory::submemories = new std::vector<RealAd
 RealMemory::RealMemory() {}
 
 RealMemory::~RealMemory() {}
+
+void RealMemory::init() {
+
+  ParserMemoryCB callback = &RealMemory::add_submemory;
+
+  while( Configurator::next_memory(callback) == true );
+
+}
 
 bool RealMemory::is_real(uint64_t address) {
 
@@ -35,14 +44,13 @@ bool RealMemory::is_real(uint64_t address) {
   return false;
 }
 
-uint64_t RealMemory::add_submemory(uint64_t base, uint64_t size, std::string *name) {
+void RealMemory::add_submemory(std::string name, uint32_t base, uint32_t size) {
 
   RealAddressSpace* addr_space = new RealAddressSpace{base, size, name};
 
   RealMemory::submemories->push_back(addr_space);
 
-  return RealMemory::submemories->size() - 1;
-
+  // return RealMemory::submemories->size() - 1;
 }
 
 void RealMemory::delete_all() {

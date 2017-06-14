@@ -347,67 +347,7 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString) {
 
-  Inception::RealMemory::add_submemory(0x20008000, 0xFFF, new std::string("RX_ETH_BUFFER"));
-  Inception::RealMemory::add_submemory(0x20009230, 0xFFF, new std::string("TX_ETH_BUFFER"));
-
-  Inception::RealMemory::add_submemory(0x400E3000, 0x5FFC, new std::string("ADC0"));
-  Inception::RealMemory::add_submemory(0x400E4000, 0x5FFC, new std::string("ADC1"));
-
-  Inception::RealMemory::add_submemory(0xE000ED00, 0xE4, new std::string("SCU"));
-  Inception::RealMemory::add_submemory(0xE000E100, 0xE04, new std::string("NVIC"));
-  Inception::RealMemory::add_submemory(0xE000E010, 0x10, new std::string("Systick"));
-  Inception::RealMemory::add_submemory(0x400F4000, 0x3FFC, new std::string("HIGH_SPEED_GPIO"));
-
-  Inception::RealMemory::add_submemory(0x400C7000, 0x5FFC, new std::string("GIMA"));
-  Inception::RealMemory::add_submemory(0x400C6000, 0x5FFC, new std::string("QEI"));
-  Inception::RealMemory::add_submemory(0x400C5000, 0x5FFC, new std::string("SSP1"));
-  Inception::RealMemory::add_submemory(0x400C4000, 0x5FFC, new std::string("TIMER3"));
-  Inception::RealMemory::add_submemory(0x400C3000, 0x5FFC, new std::string("TIMER2"));
-  Inception::RealMemory::add_submemory(0x400C2000, 0x5FFC, new std::string("USART3"));
-  Inception::RealMemory::add_submemory(0x400C1000, 0x5FFC, new std::string("USART2"));
-  Inception::RealMemory::add_submemory(0x400C0000, 0x5FFC, new std::string("RI_TIMER"));
-
-  Inception::RealMemory::add_submemory(0x400A4000, 0x5FFC, new std::string("C_CAN1"));
-  Inception::RealMemory::add_submemory(0x400A3000, 0x5FFC, new std::string("I2S1"));
-  Inception::RealMemory::add_submemory(0x400A2000, 0x5FFC, new std::string("I2S0"));
-  Inception::RealMemory::add_submemory(0x400A1000, 0x5FFC, new std::string("I2C0"));
-  Inception::RealMemory::add_submemory(0x400A0000, 0x5FFC, new std::string("MOTOR_CONTROL_PWM"));
-
-  Inception::RealMemory::add_submemory(0x40089000, 0x5FFC, new std::string("GPIO_GROUP1"));
-  Inception::RealMemory::add_submemory(0x40088000, 0x5FFC, new std::string("GPIO_GROUP0"));
-  Inception::RealMemory::add_submemory(0x40087000, 0x5FFC, new std::string("GPIO_INTERRUPTS"));
-  Inception::RealMemory::add_submemory(0x40086000, 0x5FFC, new std::string("SCU"));
-  Inception::RealMemory::add_submemory(0x40085000, 0x5FFC, new std::string("TIMER1"));
-  Inception::RealMemory::add_submemory(0x40084000, 0x5FFC, new std::string("TIMER0"));
-  Inception::RealMemory::add_submemory(0x40083000, 0x5FFC, new std::string("SSP0"));
-  Inception::RealMemory::add_submemory(0x40082000, 0x5FFC, new std::string("UART1"));
-  Inception::RealMemory::add_submemory(0x40081000, 0x5FFC, new std::string("USART0"));
-  Inception::RealMemory::add_submemory(0x40080000, 0x5FFC, new std::string("WWDT"));
-
-  Inception::RealMemory::add_submemory(0x40054000, 0x5FFC, new std::string("RESERVED"));
-  Inception::RealMemory::add_submemory(0x40053000, 0x5FFC, new std::string("RGU"));
-  Inception::RealMemory::add_submemory(0x40052000, 0x5FFC, new std::string("CCU2"));
-  Inception::RealMemory::add_submemory(0x40051000, 0x5FFC, new std::string("CCU1"));
-  Inception::RealMemory::add_submemory(0x40050000, 0x5FFC, new std::string("CGU"));
-  Inception::RealMemory::add_submemory(0x40047000, 0x5FFC, new std::string("RESERVED"));
-  Inception::RealMemory::add_submemory(0x40046000, 0x5FFC, new std::string("RTC"));
-  Inception::RealMemory::add_submemory(0x40045000, 0x5FFC, new std::string("OTP_CONTROLLER"));
-  Inception::RealMemory::add_submemory(0x40044000, 0x5FFC, new std::string("EVENT_ROUTER"));
-  Inception::RealMemory::add_submemory(0x40043000, 0x5FFC, new std::string("CREG"));
-  Inception::RealMemory::add_submemory(0x40042000, 0x5FFC, new std::string("POWER_MODE_CONTROL"));
-  Inception::RealMemory::add_submemory(0x40041000, 0x5FFC, new std::string("BACKUP_REGISTERS"));
-  Inception::RealMemory::add_submemory(0x40040000, 0x5FFC, new std::string("ALARM_TIMER"));
-  Inception::RealMemory::add_submemory(0x40010000, 0x1FFC, new std::string("ETHERNET"));
-  Inception::RealMemory::add_submemory(0x40009000, 0x5FFC, new std::string("RESERVED"));
-  Inception::RealMemory::add_submemory(0x40008000, 0x5FFC, new std::string("LCD"));
-  Inception::RealMemory::add_submemory(0x40007000, 0x5FFC, new std::string("USB1"));
-  Inception::RealMemory::add_submemory(0x40006000, 0x5FFC, new std::string("USB0"));
-  Inception::RealMemory::add_submemory(0x40005000, 0x5FFC, new std::string("EMC"));
-  Inception::RealMemory::add_submemory(0x40004000, 0x5FFC, new std::string("SD/MMC"));
-  Inception::RealMemory::add_submemory(0x40003000, 0x5FFC, new std::string("SPIFI"));
-  Inception::RealMemory::add_submemory(0x40002000, 0x5FFC, new std::string("DMA"));
-  Inception::RealMemory::add_submemory(0x40001000, 0x5FFC, new std::string("RESERVED"));
-  Inception::RealMemory::add_submemory(0x40000000, 0x5FFC, new std::string("SCT"));
+  Inception::RealMemory::init();
 
   if (coreSolverTimeout)
     UseForkedCoreSolver = true;
@@ -474,13 +414,10 @@ const Module *Executor::setModule(llvm::Module *module,
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
   specialFunctionHandler->prepare();
-  klee_warning("specialFunctionHandler->prepare()\n\n");
 
   kmodule->prepare(opts, interpreterHandler);
-  klee_warning("kmodule->prepare()\n\n");
 
   specialFunctionHandler->bind();
-  klee_warning("specialFunctionHandler->bind()\n\n");
 
   if (StatsTracker::useStatistics() || userSearcherRequiresMD2U()) {
     statsTracker = new StatsTracker(
@@ -673,10 +610,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(), e = m->global_end();
        i != e; ++i) {
 
-     klee_warning("Loading symbol(%s); size=%d; type=0x%02x.",
-    i->getName().data(),
-    i->getName().size(),
-    i->getType()->getElementType()->getTypeID());
+    //  klee_warning("Loading symbol(%s); size=%d; type=0x%02x.",
+    // i->getName().data(),
+    // i->getName().size(),
+    // i->getType()->getElementType()->getTypeID());
 
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external

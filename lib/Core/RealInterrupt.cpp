@@ -7,6 +7,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
+#include "klee/Internal/Support/Configurator.h"
 #include "llvm/IR/Module.h"
 
 using namespace klee;
@@ -43,13 +44,13 @@ RealInterrupt::RealInterrupt(){}
 
 void RealInterrupt::init(klee::Executor* _executor) {
 
+  printf("[RealInterrupt] init ...");
+
   RealInterrupt::executor = _executor;
 
-  AddInterrupt(StringRef("GPIO0_IRQHandler"), 48, 0, 0);                 /* GINT0_IRQHandler                */
-  AddInterrupt(StringRef("GINT0_IRQHandler"), 56, 0, 0);                 /* GINT0_IRQHandler                */
-  AddInterrupt(StringRef("GINT1_IRQHandler"), 57, 0, 0);                 /* GINT1_IRQHandler                */
-  AddInterrupt(StringRef("SysTick_Handler"), 15, 0, 0);                  /* SysTick Handler                 */
-  AddInterrupt(StringRef("ADC0_IRQHandler"), 33, 0, 0);                  /* ADC0 Handler                    */
+  ParserInterruptCB callback = &RealInterrupt::AddInterrupt;
+
+  while( Configurator::next_interrupt(callback) == true );
 
   //configure trace
   if(RealTarget::inception_device == NULL)
@@ -58,11 +59,18 @@ void RealInterrupt::init(klee::Executor* _executor) {
   Watcher watcher = &RealInterrupt::raise;
   // Watcher watcher = &watch_and_avoid;
   trace_init(Inception::RealTarget::inception_device, watcher);
+
+  printf("-> ok");
 }
 
-void RealInterrupt::AddInterrupt(StringRef handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {
+void RealInterrupt::AddInterrupt(std::string handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {
 
-  interrupts_vector.insert(std::pair<uint32_t, Interrupt*>(id, new Interrupt(handler_name, id, group_priority, internal_priority)));
+  printf("[RealInterrupt] adding interrupt  ...");
+
+  interrupts_vector.insert(std::pair<uint32_t, Interrupt*>(id, new Interrupt(llvm::StringRef(handler_name), id, group_priority, internal_priority)));
+
+  printf("-> ok");
+
 }
 
 void RealInterrupt::raise(int id) {
@@ -172,7 +180,7 @@ void RealInterrupt::stop_interrupt() {
 
   RealInterrupt::ending = true;
 
-  llvm::errs() << "[RealInterrupt] Return from interrupt ...\n\n";
+  // llvm::errs() << "[RealInterrupt] Return from interrupt ...\n\n";
 
   RealInterrupt::current_interrupt = NULL;
 }
@@ -214,7 +222,7 @@ ExecutionState* RealInterrupt::create_interrupt_state() {
   if(f_interrupt == NULL)
     klee_error("[RealInterrupt] Fail to resolve interrupt handler name : ", function_name.str());
   // else
-    // llvm::errs() << "[RealInterrupt] Raise " << function_name << " from " << Inception::RealInterrupt::caller->getName() <<"\n";
+  //   llvm::errs() << "[RealInterrupt] Raise " << function_name << " from " << Inception::RealInterrupt::caller->getName() <<"\n";
 
   //Copy the current state
   ExecutionState *_interrupt_state = current->branch();
