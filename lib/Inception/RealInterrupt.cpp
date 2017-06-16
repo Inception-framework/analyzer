@@ -1,5 +1,5 @@
-#include "klee/RealInterrupt.h"
-#include "klee/RealTarget.h"
+#include "inception/RealInterrupt.h"
+#include "inception/RealTarget.h"
 #include "klee/Internal/Module/KModule.h"
 #include <stdexcept>
 #include "Executor.h"
@@ -7,7 +7,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Support/Configurator.h"
+#include "inception/Configurator.h"
 #include "llvm/IR/Module.h"
 
 using namespace klee;

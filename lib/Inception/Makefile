@@ -1,4 +1,4 @@
-#===-- lib/Makefile ----------------------------------------*- Makefile -*--===#
+#===-- lib/Inception/Makefile -----------------------------------*- Makefile -*--===#
 #
 #                     The KLEE Symbolic Virtual Machine
 #
@@ -7,8 +7,12 @@
 #
 #===------------------------------------------------------------------------===#
 
-LEVEL=..
+LEVEL=../..
 
-PARALLEL_DIRS=Basic Support Expr Solver Module Core Inception
+LIBRARYNAME=inceptionCore
+DONT_BUILD_RELINKED=1
+BUILD_ARCHIVE=1
+NO_INSTALL=1
 
 include $(LEVEL)/Makefile.common
+
