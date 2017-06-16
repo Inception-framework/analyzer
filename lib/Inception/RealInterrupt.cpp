@@ -2,8 +2,8 @@
 #include "inception/RealTarget.h"
 #include "klee/Internal/Module/KModule.h"
 #include <stdexcept>
-#include "Executor.h"
-#include "PTree.h"
+#include "../Core/Executor.h"
+#include "../Core/PTree.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"

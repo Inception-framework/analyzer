@@ -1,5 +1,5 @@
-#include "klee/RealMemory.h"
-#include "klee/Internal/Support/Configurator.h"
+#include "inception/RealMemory.h"
+#include "inception/Configurator.h"
 
 #include "stdio.h"
 

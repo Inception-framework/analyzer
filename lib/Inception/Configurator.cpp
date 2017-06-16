@@ -5,7 +5,7 @@
 
 #include <json/json.h>
 
-#include "klee/Internal/Support/Configurator.h"
+#include "inception/Configurator.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 
 using namespace std;
