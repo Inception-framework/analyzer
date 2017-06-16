@@ -1,3 +1,4 @@
+make clean
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -20,7 +21,7 @@ fi
 
 #make -j 4 all KLEE_USE_CXX11 -C ../..
 
-make -j8 all
+make clean; make -j12 all
 
 if [ $? != 0 ]; then
         echo "FAIL to compile Klee"
