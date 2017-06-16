@@ -37,14 +37,14 @@ namespace Inception{
   class Interrupt{
 
     public :
-      Interrupt(llvm::StringRef _handlerName, uint32_t _id, uint32_t _group_priority, uint32_t _internal_priority) :
+      Interrupt(std::string _handlerName, uint32_t _id, uint32_t _group_priority, uint32_t _internal_priority) :
         handlerName(_handlerName), id(_id), group_priority(_group_priority), internal_priority(_internal_priority), state(0) {}
 
       Interrupt();
 
       ~Interrupt();
 
-      llvm::StringRef handlerName;
+      std::string handlerName;
 
       uint32_t id;
 

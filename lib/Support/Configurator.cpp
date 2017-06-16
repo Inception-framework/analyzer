@@ -62,24 +62,17 @@ bool Configurator::next_memory(ParserMemoryCB callback) {
 	// Iterate over the sequence elements.
 	if( Configurator::memory_index < realMemory.size() ) {
 
-    cout << "Found RealMemory : ";
     std::string name = realMemory[Configurator::memory_index].get("name", "0").asString();
-    cout << name;
 
-		cout << " at address ";
 		std::string s_address = realMemory[Configurator::memory_index].get("address", "0").asString();
 		ss << std::hex << s_address;
 		ss >> address;
-    cout << address;
 		ss.clear();
 
-		cout << " of size ";
 		std::string s_size = realMemory[Configurator::memory_index].get("size", "0").asString();
 		ss << std::hex << s_size;
 		ss >> size;
-    cout << size;
 		ss.clear();
-		cout << "\n";
 
 		callback(name, address, size);
 
@@ -108,33 +101,26 @@ bool Configurator::next_interrupt(ParserInterruptCB callback) {
 	// Iterate over the sequence elements.
 	if( Configurator::interrupt_index < realInterrupt.size() ) {
 
-    cout << "Found RealInterrurpt : ";
 		std::string name = realInterrupt[Configurator::interrupt_index].get("name", "0").asString();
 
-		cout << " priority_g ";
 		std::string s_priority_g = realInterrupt[Configurator::interrupt_index].get("priority_g", "0").asString();
-		ss << std::hex << s_priority_g;
+		ss << s_priority_g;
 		ss >> priority_g;
 		ss.clear();
 
-		cout << " of priority ";
 		std::string s_priority = realInterrupt[Configurator::interrupt_index].get("priority", "0").asString();
-		ss << std::hex << s_priority;
+		ss << s_priority;
 		ss >> priority;
 		ss.clear();
 
-    cout << " id ";
 		std::string s_id = realInterrupt[Configurator::interrupt_index].get("id", "0").asString();
-		ss << std::hex << s_id;
-		ss >> id;
+		ss << s_id;
+    ss >> id;
 		ss.clear();
 
-    cout << "Found RealMemory : ";
 		std::string handler = realInterrupt[Configurator::interrupt_index].get("handler", "0").asString();
 
-		cout << "\n";
-
-		callback(handler, priority_g, priority, id);
+		callback(handler, id, priority_g, priority);
 
     Configurator::interrupt_index++;
 

@@ -46,6 +46,8 @@ bool RealMemory::is_real(uint64_t address) {
 
 void RealMemory::add_submemory(std::string name, uint32_t base, uint32_t size) {
 
+  printf("AddMemomry(%s, 0x%08x, 0x%08x)\n", name.c_str(), base, size);
+
   RealAddressSpace* addr_space = new RealAddressSpace{base, size, name};
 
   RealMemory::submemories->push_back(addr_space);

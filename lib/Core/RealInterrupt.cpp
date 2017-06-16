@@ -44,8 +44,6 @@ RealInterrupt::RealInterrupt(){}
 
 void RealInterrupt::init(klee::Executor* _executor) {
 
-  printf("[RealInterrupt] init ...");
-
   RealInterrupt::executor = _executor;
 
   ParserInterruptCB callback = &RealInterrupt::AddInterrupt;
@@ -59,18 +57,13 @@ void RealInterrupt::init(klee::Executor* _executor) {
   Watcher watcher = &RealInterrupt::raise;
   // Watcher watcher = &watch_and_avoid;
   trace_init(Inception::RealTarget::inception_device, watcher);
-
-  printf("-> ok");
 }
 
 void RealInterrupt::AddInterrupt(std::string handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {
 
-  printf("[RealInterrupt] adding interrupt  ...");
+  printf("AddInterrupt(%s, %d, %d, %d)\n", handler_name.c_str(), id, group_priority, internal_priority);
 
-  interrupts_vector.insert(std::pair<uint32_t, Interrupt*>(id, new Interrupt(llvm::StringRef(handler_name), id, group_priority, internal_priority)));
-
-  printf("-> ok");
-
+  interrupts_vector.insert(std::pair<uint32_t, Interrupt*>(id, new Interrupt(handler_name, id, group_priority, internal_priority)));
 }
 
 void RealInterrupt::raise(int id) {
@@ -215,7 +208,7 @@ ExecutionState* RealInterrupt::create_interrupt_state() {
   RealInterrupt::pending_interrupts.pop();
 
   //Get the handler name of the interrupt
-  llvm::StringRef function_name = RealInterrupt::current_interrupt->handlerName;
+  llvm::StringRef function_name(RealInterrupt::current_interrupt->handlerName);
 
   //Retrieve the LLVM Function
   Function *f_interrupt = RealInterrupt::executor->getKModule()->module->getFunction(function_name);
