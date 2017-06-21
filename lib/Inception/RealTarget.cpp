@@ -96,7 +96,7 @@ namespace Inception {
       //Is the access memory alligned
       switch((address % 4)) {
         case 3:
-          new_val = (new_val & 0x000000FF) | (value << 24);
+          new_val = (new_val & 0x00FFFFFF) | (value << 24);
           break;
         case 2:
           new_val = (new_val & 0xFF00FFFF) | ((value & 0x000000FF) << 16 );
