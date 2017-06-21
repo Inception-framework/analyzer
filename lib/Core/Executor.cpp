@@ -3661,8 +3661,8 @@ void Executor::runFunctionAsMain(Function *f,
     state->symPathOS = symPathWriter->open();
 
 
-  if (statsTracker)
-    statsTracker->framePushed(*state, 0);
+  // if (statsTracker)
+    // statsTracker->framePushed(*state, 0);
 
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
