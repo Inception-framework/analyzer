@@ -3364,6 +3364,55 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                       KInstruction *target /* undef if write */) {
   Expr::Width type = (isWrite ? value->getWidth() :
                      getWidthForLLVMType(target->inst->getType()));
+
+  ConstantExpr *addr_ce = dyn_cast<ConstantExpr>(address);
+
+  if (addr_ce != NULL) {
+   uint64_t concrete_address = addr_ce->getZExtValue();
+
+   if (Inception::RealMemory::is_real(concrete_address) == true) {
+
+     // llvm::errs() << *target->inst << " :  \t";
+
+     if (isWrite) {
+
+       ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+       uint64_t concrete_address = address_ce->getZExtValue();
+
+       ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
+       uint64_t concrete_value = value_ce->getZExtValue();
+
+       Inception::RealTarget::write(concrete_address, concrete_value, type);
+       // std::string srcFile = target->info->file;
+       // if (srcFile.length() > 82)
+       //   srcFile = srcFile.substr(82);
+       // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+       // printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
+       return;
+     } else {
+
+       // uint64_t concrete_value = 500;
+       ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+       uint64_t concrete_address = address_ce->getZExtValue();
+
+       uint64_t concrete_value = 0;
+
+       // ref<Expr> result = ConstantExpr::alloc(0, Expr::Int32);
+
+       ref<Expr> result = Inception::RealTarget::read(concrete_address,
+                                                      &concrete_value, type);
+       bindLocal(target, state, result);
+
+       // std::string srcFile = target->info->file;
+       // if (srcFile.length() > 82)
+       //   srcFile = srcFile.substr(82);
+       // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+       // printf("[RealRead] *0x%08x -> 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
+       return;
+     }
+   }
+  }
+
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
   if (SimplifySymIndices) {
