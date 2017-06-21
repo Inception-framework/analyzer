@@ -11,10 +11,10 @@
 #include "Z3Builder.h"
 
 #include "klee/Expr.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Solver.h"
-#include "klee/util/Bits.h"
-#include "ConstantDivision.h"
 #include "klee/SolverStats.h"
+#include "klee/util/Bits.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -26,6 +26,21 @@ llvm::cl::opt<bool> UseConstructHashZ3(
     "use-construct-hash-z3",
     llvm::cl::desc("Use hash-consing during Z3 query construction."),
     llvm::cl::init(true));
+
+// FIXME: This should be std::atomic<bool>. Need C++11 for that.
+bool Z3InterationLogOpen = false;
+}
+
+namespace klee {
+
+// Declared here rather than `Z3Builder.h` so they can be called in gdb.
+template <> void Z3NodeHandle<Z3_sort>::dump() {
+  llvm::errs() << "Z3SortHandle:\n" << ::Z3_sort_to_string(context, node)
+               << "\n";
+}
+template <> void Z3NodeHandle<Z3_ast>::dump() {
+  llvm::errs() << "Z3ASTHandle:\n" << ::Z3_ast_to_string(context, as_ast())
+               << "\n";
 }
 
 void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
@@ -45,6 +60,9 @@ void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
   }
   llvm::errs() << "Error: Incorrect use of Z3. [" << ec << "] " << errorMsg
                << "\n";
+  // NOTE: The current implementation of `Z3_close_log()` can be safely
+  // called even if the log isn't open.
+  Z3_close_log();
   abort();
 }
 
@@ -55,8 +73,17 @@ void Z3ArrayExprHash::clear() {
   _array_hash.clear();
 }
 
-Z3Builder::Z3Builder(bool autoClearConstructCache)
-    : autoClearConstructCache(autoClearConstructCache) {
+Z3Builder::Z3Builder(bool autoClearConstructCache, const char* z3LogInteractionFileArg)
+    : autoClearConstructCache(autoClearConstructCache), z3LogInteractionFile("") {
+  if (z3LogInteractionFileArg)
+    this->z3LogInteractionFile = std::string(z3LogInteractionFileArg);
+  if (z3LogInteractionFile.length() > 0) {
+    klee_message("Logging Z3 API interaction to \"%s\"",
+                 z3LogInteractionFile.c_str());
+    assert(!Z3InterationLogOpen && "interaction log should not already be open");
+    Z3_open_log(z3LogInteractionFile.c_str());
+    Z3InterationLogOpen = true;
+  }
   // FIXME: Should probably let the client pass in a Z3_config instead
   Z3_config cfg = Z3_mk_config();
   // It is very important that we ask Z3 to let us manage memory so that
@@ -75,6 +102,10 @@ Z3Builder::~Z3Builder() {
   clearConstructCache();
   _arr_hash.clear();
   Z3_del_context(ctx);
+  if (z3LogInteractionFile.length() > 0) {
+    Z3_close_log();
+    Z3InterationLogOpen = false;
+  }
 }
 
 Z3SortHandle Z3Builder::getBvSort(unsigned width) {
@@ -529,6 +560,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (srcWidth == 1) {
       return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
+      assert(*width_out > srcWidth && "Invalid width_out");
       return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - srcWidth), src),
                          ctx);
     }
@@ -621,12 +653,15 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
         uint64_t divisor = CE->getZExtValue();
 
         if (bits64::isPowerOfTwo(divisor)) {
-          unsigned bits = bits64::indexOfSingleBit(divisor);
+          // FIXME: This should be unsigned but currently needs to be signed to
+          // avoid signed-unsigned comparison in assert.
+          int bits = bits64::indexOfSingleBit(divisor);
 
           // special case for modding by 1 or else we bvExtract -1:0
           if (bits == 0) {
             return bvZero(*width_out);
           } else {
+            assert(*width_out > bits && "invalid width_out");
             return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - bits),
                                             bvExtract(left, bits - 1, 0)),
                                ctx);
@@ -815,5 +850,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     assert(0 && "unhandled Expr type");
     return getTrue();
   }
+}
 }
 #endif // ENABLE_Z3

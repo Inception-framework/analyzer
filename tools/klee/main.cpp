@@ -9,22 +9,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
-#include "klee/Interpreter.h"
-#include "klee/Statistics.h"
-#include "klee/Config/Version.h"
 #include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/TreeStream.h"
 #include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ModuleUtil.h"
-#include "klee/Internal/System/Time.h"
-#include "klee/Internal/Support/PrintVersion.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Support/FileHandling.h"
+#include "klee/Internal/Support/ModuleUtil.h"
+#include "klee/Internal/Support/PrintVersion.h"
+#include "klee/Internal/System/Time.h"
+#include "klee/Interpreter.h"
+#include "klee/Statistics.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -32,7 +32,6 @@
 #include "llvm/IR/LLVMContext.h"
 #else
 #include "llvm/Constants.h"
-#include "llvm/Module.h"
 #include "llvm/Type.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Instruction.h"
@@ -107,8 +106,8 @@ namespace {
             cl::desc("Write .cvc files for each test case"));
 
   cl::opt<bool>
-  WritePCs("write-pcs",
-            cl::desc("Write .pc files for each test case"));
+  WriteKQueries("write-kqueries",
+            cl::desc("Write .kquery files for each test case"));
 
   cl::opt<bool>
   WriteSMT2s("write-smt2s",
@@ -131,7 +130,7 @@ namespace {
                 cl::desc("Write .sym.path files for each test case"));
 
   cl::opt<bool>
-  ExitOnError("exit-on-error",
+  OptExitOnError("exit-on-error",
               cl::desc("Exit if errors occur"));
 
 
@@ -144,14 +143,14 @@ namespace {
        cl::desc("Choose libc version (none by default)."),
        cl::values(clEnumValN(NoLibc, "none", "Don't link in a libc"),
                   clEnumValN(KleeLibc, "klee", "Link in klee libc"),
-		  clEnumValN(UcLibc, "uclibc", "Link in uclibc (adapted for klee)"),
-		  clEnumValEnd),
+		  clEnumValN(UcLibc, "uclibc", "Link in uclibc (adapted for klee)")
+		  KLEE_LLVM_CL_VAL_END),
        cl::init(NoLibc));
 
 
   cl::opt<bool>
   WithPOSIXRuntime("posix-runtime",
-		cl::desc("Link with POSIX runtime.  Options that can be passed as arguments to the programs are: --sym-argv <max-len>  --sym-argvs <min-argvs> <max-argvs> <max-len> + file model options"),
+		cl::desc("Link with POSIX runtime.  Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len> + file model options"),
 		cl::init(false));
 
   cl::opt<bool>
@@ -385,22 +384,14 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   llvm::raw_fd_ostream *f;
   std::string Error;
   std::string path = getOutputFilename(filename);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
-  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
-  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
-#else
-  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::raw_fd_ostream::F_Binary);
-#endif
+  f = klee_open_output_file(path, Error);
   if (!Error.empty()) {
-    klee_error("error opening file \"%s\".  KLEE may have run out of file "
-               "descriptors: try to increase the maximum number of open file "
-               "descriptors by using ulimit (%s).",
-               filename.c_str(), Error.c_str());
-    delete f;
-    f = NULL;
+    klee_warning("error opening file \"%s\".  KLEE may have run out of file "
+                 "descriptors: try to increase the maximum number of open file "
+                 "descriptors by using ulimit (%s).",
+                 path.c_str(), Error.c_str());
+    return NULL;
   }
-
   return f;
 }
 
@@ -416,13 +407,13 @@ llvm::raw_fd_ostream *KleeHandler::openTestFile(const std::string &suffix,
 }
 
 
-/* Outputs all files (.ktest, .pc, .cov etc.) describing a test case */
+/* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
 void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
-  if (errorMessage && ExitOnError) {
-    llvm::errs() << "EXITING ON ERROR:\n" << errorMessage << "\n";
-    exit(1);
+  if (errorMessage && OptExitOnError) {
+    m_interpreter->prepareForEarlyExit();
+    klee_error("EXITING ON ERROR:\n%s\n", errorMessage);
   }
 
   if (!NoOutput) {
@@ -482,10 +473,10 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       delete f;
     }
 
-    if (errorMessage || WritePCs) {
+    if (errorMessage || WriteKQueries) {
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints,Interpreter::KQUERY);
-      llvm::raw_ostream *f = openTestFile("pc", id);
+      llvm::raw_ostream *f = openTestFile("kquery", id);
       *f << constraints;
       delete f;
     }
@@ -669,15 +660,18 @@ static int initEnv(Module *mainModule) {
   */
 
   Function *mainFn = mainModule->getFunction(EntryPoint);
+  if (!mainFn) {
+    klee_error("'%s' function not found in module.", EntryPoint.c_str());
+  }
 
   if (mainFn->arg_size() < 2) {
     klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
   }
 
-  Instruction* firstInst = mainFn->begin()->begin();
+  Instruction *firstInst = static_cast<Instruction *>(mainFn->begin()->begin());
 
-  Value* oldArgc = mainFn->arg_begin();
-  Value* oldArgv = ++mainFn->arg_begin();
+  Value *oldArgc = static_cast<Argument *>(mainFn->arg_begin());
+  Value *oldArgv = static_cast<Argument *>(++mainFn->arg_begin());
 
   AllocaInst* argcPtr =
     new AllocaInst(oldArgc->getType(), "argcPtr", firstInst);
@@ -686,11 +680,12 @@ static int initEnv(Module *mainModule) {
 
   /* Insert void klee_init_env(int* argc, char*** argv) */
   std::vector<const Type*> params;
-  params.push_back(Type::getInt32Ty(getGlobalContext()));
-  params.push_back(Type::getInt32Ty(getGlobalContext()));
+  LLVMContext &ctx = mainModule->getContext();
+  params.push_back(Type::getInt32Ty(ctx));
+  params.push_back(Type::getInt32Ty(ctx));
   Function* initEnvFn =
     cast<Function>(mainModule->getOrInsertFunction("klee_init_env",
-                                                   Type::getVoidTy(getGlobalContext()),
+                                                   Type::getVoidTy(ctx),
                                                    argcPtr->getType(),
                                                    argvPtr->getType(),
                                                    NULL));
@@ -754,6 +749,7 @@ static const char *modelledExternals[] = {
   "klee_mark_global",
   "klee_merge",
   "klee_prefer_cex",
+  "klee_posix_prefer_cex",
   "klee_print_expr",
   "klee_print_range",
   "klee_report_error",
@@ -894,9 +890,8 @@ void externalsAndGlobalsCheck(const Module *m) {
         if (const CallInst *ci = dyn_cast<CallInst>(it)) {
           if (isa<InlineAsm>(ci->getCalledValue())) {
             klee_warning_once(&*fnIt,
-                              "function \"%s\" has inline asm (source can be instrumented here !)",
+                              "function \"%s\" has inline asm",
                               fnIt->getName().data());
-            llvm::errs() << "[Inception] instruction: " << dyn_cast<Instruction>(it) << "\n";
           }
         }
       }
@@ -1009,9 +1004,7 @@ static char *format_tdiff(char *buf, long seconds)
 
 #ifndef SUPPORT_KLEE_UCLIBC
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) {
-  fprintf(stderr, "error: invalid libc, no uclibc support!\n");
-  exit(1);
-  return 0;
+  klee_error("invalid libc, no uclibc support!\n");
 }
 #else
 static void replaceOrRenameFunction(llvm::Module *module,
@@ -1031,25 +1024,31 @@ static void replaceOrRenameFunction(llvm::Module *module,
   }
 }
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) {
+  LLVMContext &ctx = mainModule->getContext();
   // Ensure that klee-uclibc exists
   SmallString<128> uclibcBCA(libDir);
   llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  Twine uclibcBCA_twine(uclibcBCA.c_str());
+  if (!llvm::sys::fs::exists(uclibcBCA_twine))
+#else
   bool uclibcExists=false;
   llvm::sys::fs::exists(uclibcBCA.c_str(), uclibcExists);
   if (!uclibcExists)
+#endif
     klee_error("Cannot find klee-uclibc : %s", uclibcBCA.c_str());
 
   Function *f;
   // force import of __uClibc_main
   mainModule->getOrInsertFunction("__uClibc_main",
-                                  FunctionType::get(Type::getVoidTy(getGlobalContext()),
+                                  FunctionType::get(Type::getVoidTy(ctx),
                                                std::vector<LLVM_TYPE_Q Type*>(),
                                                     true));
 
   // force various imports
   if (WithPOSIXRuntime) {
-    LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
+    LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(ctx);
     mainModule->getOrInsertFunction("realpath",
                                     PointerType::getUnqual(i8Ty),
                                     PointerType::getUnqual(i8Ty),
@@ -1059,12 +1058,12 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
                                     PointerType::getUnqual(i8Ty),
                                     NULL);
     mainModule->getOrInsertFunction("__fgetc_unlocked",
-                                    Type::getInt32Ty(getGlobalContext()),
+                                    Type::getInt32Ty(ctx),
                                     PointerType::getUnqual(i8Ty),
                                     NULL);
     mainModule->getOrInsertFunction("__fputc_unlocked",
-                                    Type::getInt32Ty(getGlobalContext()),
-                                    Type::getInt32Ty(getGlobalContext()),
+                                    Type::getInt32Ty(ctx),
+                                    Type::getInt32Ty(ctx),
                                     PointerType::getUnqual(i8Ty),
                                     NULL);
   }
@@ -1079,7 +1078,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   // naming conflict.
   for (Module::iterator fi = mainModule->begin(), fe = mainModule->end();
        fi != fe; ++fi) {
-    Function *f = fi;
+    Function *f = static_cast<Function *>(fi);
     const std::string &name = f->getName();
     if (name[0]=='\01') {
       unsigned size = name.size();
@@ -1129,17 +1128,17 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   std::vector<LLVM_TYPE_Q Type*> fArgs;
   fArgs.push_back(ft->getParamType(1)); // argc
   fArgs.push_back(ft->getParamType(2)); // argv
-  Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(getGlobalContext()), fArgs, false),
+  Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(ctx), fArgs, false),
                                     GlobalVariable::ExternalLinkage,
                                     EntryPoint,
                                     mainModule);
-  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", stub);
+  BasicBlock *bb = BasicBlock::Create(ctx, "entry", stub);
 
   std::vector<llvm::Value*> args;
   args.push_back(llvm::ConstantExpr::getBitCast(userMainFn,
                                                 ft->getParamType(0)));
-  args.push_back(stub->arg_begin()); // argc
-  args.push_back(++stub->arg_begin()); // argv
+  args.push_back(static_cast<Argument *>(stub->arg_begin())); // argc
+  args.push_back(static_cast<Argument *>(++stub->arg_begin())); // argv
   args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
@@ -1150,7 +1149,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   CallInst::Create(uclibcMainFn, args.begin(), args.end(), "", bb);
 #endif
 
-  new UnreachableInst(getGlobalContext(), bb);
+  new UnreachableInst(ctx, bb);
 
   klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
   return mainModule;
@@ -1174,7 +1173,7 @@ int main(int argc, char **argv, char **envp) {
     if (pid<0) {
       klee_error("unable to fork watchdog");
     } else if (pid) {
-      fprintf(stderr, "KLEE: WATCHDOG: watching %d\n", pid);
+      klee_message("KLEE: WATCHDOG: watching %d\n", pid);
       fflush(stderr);
       sys::SetInterruptFunction(interrupt_handle_watchdog);
 
@@ -1191,7 +1190,7 @@ int main(int argc, char **argv, char **envp) {
           if (errno==ECHILD) { // No child, no need to watch but
                                // return error since we didn't catch
                                // the exit.
-            fprintf(stderr, "KLEE: watchdog exiting (no child)\n");
+            klee_warning("KLEE: watchdog exiting (no child)\n");
             return 1;
           } else if (errno!=EINTR) {
             perror("watchdog waitpid");
@@ -1206,13 +1205,16 @@ int main(int argc, char **argv, char **envp) {
             ++level;
 
             if (level==1) {
-              fprintf(stderr, "KLEE: WATCHDOG: time expired, attempting halt via INT\n");
+              klee_warning(
+                  "KLEE: WATCHDOG: time expired, attempting halt via INT\n");
               kill(pid, SIGINT);
             } else if (level==2) {
-              fprintf(stderr, "KLEE: WATCHDOG: time expired, attempting halt via gdb\n");
+              klee_warning(
+                  "KLEE: WATCHDOG: time expired, attempting halt via gdb\n");
               halt_via_gdb(pid);
             } else {
-              fprintf(stderr, "KLEE: WATCHDOG: kill(9)ing child (I tried to be nice)\n");
+              klee_warning(
+                  "KLEE: WATCHDOG: kill(9)ing child (I tried to be nice)\n");
               kill(pid, SIGKILL);
               return 1; // what more can we do
             }
@@ -1231,53 +1233,13 @@ int main(int argc, char **argv, char **envp) {
   sys::SetInterruptFunction(interrupt_handle);
 
   // Load the bytecode...
-  std::string ErrorMsg;
-  Module *mainModule = 0;
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-  OwningPtr<MemoryBuffer> BufferPtr;
-  error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), BufferPtr);
-  if (ec) {
+  std::string errorMsg;
+  LLVMContext ctx;
+  Module *mainModule = klee::loadModule(ctx, InputFile, errorMsg);
+  if (!mainModule) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
-               ec.message().c_str());
+               errorMsg.c_str());
   }
-
-  mainModule = getLazyBitcodeModule(BufferPtr.get(), getGlobalContext(), &ErrorMsg);
-
-  if (mainModule) {
-    if (mainModule->MaterializeAllPermanently(&ErrorMsg)) {
-      delete mainModule;
-      mainModule = 0;
-    }
-  }
-  if (!mainModule)
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               ErrorMsg.c_str());
-#else
-  auto Buffer = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
-  if (!Buffer)
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               Buffer.getError().message().c_str());
-
-  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
-
-  if (!mainModuleOrError) {
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               mainModuleOrError.getError().message().c_str());
-  }
-  else {
-    // The module has taken ownership of the MemoryBuffer so release it
-    // from the std::unique_ptr
-    Buffer->release();
-  }
-
-  mainModule = *mainModuleOrError;
-  if (auto ec = mainModule->materializeAllPermanently()) {
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               ec.message().c_str());
-  }
-#endif
-
-  klee_warning("[Inception] bitcode loaded successfully\n");
 
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
@@ -1286,7 +1248,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
-  Interpreter::ModuleOptions Opts(LibraryDir.c_str(),
+  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint,
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
@@ -1333,8 +1295,7 @@ int main(int argc, char **argv, char **envp) {
   // locale and other data and then calls main.
   Function *mainFn = mainModule->getFunction(EntryPoint);
   if (!mainFn) {
-    llvm::errs() << "'" << EntryPoint << "' function not found in module.\n";
-    return -1;
+    klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
   // FIXME: Change me to std types.
@@ -1386,7 +1347,7 @@ int main(int argc, char **argv, char **envp) {
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
-    theInterpreter = Interpreter::create(IOpts, handler);
+    theInterpreter = Interpreter::create(ctx, IOpts, handler);
   handler->setInterpreter(interpreter);
 
   for (int i=0; i<argc; i++) {
@@ -1394,13 +1355,9 @@ int main(int argc, char **argv, char **envp) {
   }
   handler->getInfoStream() << "PID: " << getpid() << "\n";
 
-  llvm::errs() << "[Inception] Loading module  " << mainModule->getModuleIdentifier() << "\n";
   const Module *finalModule =
     interpreter->setModule(mainModule, Opts);
-
   externalsAndGlobalsCheck(finalModule);
-
-  llvm::errs() << "[Inception] Loading module  " << finalModule->getModuleIdentifier() << "\n";
 
   if (ReplayPathFile != "") {
     interpreter->setReplayPath(&replayPath);
@@ -1430,7 +1387,7 @@ int main(int argc, char **argv, char **envp) {
       if (out) {
         kTests.push_back(out);
       } else {
-        llvm::errs() << "KLEE: unable to open: " << *it << "\n";
+        klee_warning("unable to open: %s\n", (*it).c_str());
       }
     }
 
@@ -1467,8 +1424,7 @@ int main(int argc, char **argv, char **envp) {
          it != ie; ++it) {
       KTest *out = kTest_fromFile(it->c_str());
       if (!out) {
-        llvm::errs() << "KLEE: unable to open: " << *it << "\n";
-        exit(1);
+        klee_error("unable to open: %s\n", (*it).c_str());
       }
       seeds.push_back(out);
     }
@@ -1482,19 +1438,17 @@ int main(int argc, char **argv, char **envp) {
            it2 != ie; ++it2) {
         KTest *out = kTest_fromFile(it2->c_str());
         if (!out) {
-          llvm::errs() << "KLEE: unable to open: " << *it2 << "\n";
-          exit(1);
+          klee_error("unable to open: %s\n", (*it2).c_str());
         }
         seeds.push_back(out);
       }
       if (kTestFiles.empty()) {
-        llvm::errs() << "KLEE: seeds directory is empty: " << *it << "\n";
-        exit(1);
+        klee_error("seeds directory is empty: %s\n", (*it).c_str());
       }
     }
 
     if (!seeds.empty()) {
-      llvm::errs() << "KLEE: using " << seeds.size() << " seeds\n";
+      klee_message("KLEE: using %lu seeds\n", seeds.size());
       interpreter->useSeeds(&seeds);
     }
     if (RunInDir != "") {
@@ -1579,12 +1533,6 @@ int main(int argc, char **argv, char **envp) {
 
   handler->getInfoStream() << stats.str();
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-  // FIXME: This really doesn't look right
-  // This is preventing the module from being
-  // deleted automatically
-  BufferPtr.take();
-#endif
   delete handler;
 
   return 0;

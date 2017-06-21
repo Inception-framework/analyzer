@@ -47,7 +47,7 @@
 #include "llvm/IR/CallSite.h"
 #endif
 
-#include "llvm/PassManager.h"
+#include "klee/Internal/Module/LLVMPassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -57,8 +57,6 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 
 #include <sstream>
-
-#include <iostream>
 
 using namespace llvm;
 using namespace klee;
@@ -94,8 +92,8 @@ namespace {
                         clEnumValN(eSwitchTypeLLVM, "llvm",
                                    "lower using LLVM"),
                         clEnumValN(eSwitchTypeInternal, "internal",
-                                   "execute switch internally"),
-                        clEnumValEnd),
+                                   "execute switch internally")
+                        KLEE_LLVM_CL_VAL_END),
              cl::init(eSwitchTypeInternal));
 
   cl::opt<bool>
@@ -134,7 +132,7 @@ KModule::~KModule() {
 /***/
 
 namespace llvm {
-extern void Optimize(Module*);
+extern void Optimize(Module *, const std::string &EntryPoint);
 }
 
 // what a hack
@@ -146,12 +144,12 @@ static Function *getStubFunctionForCtorList(Module *m,
 
   std::vector<LLVM_TYPE_Q Type*> nullary;
 
-  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()),
+  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(m->getContext()),
 						    nullary, false),
 				  GlobalVariable::InternalLinkage,
 				  name,
                               m);
-  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", fn);
+  BasicBlock *bb = BasicBlock::Create(m->getContext(), "entry", fn);
 
   // From lli:
   // Should be an array of '{ int, void ()* }' structs.  The first value is
@@ -160,8 +158,14 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       ConstantStruct *cs = cast<ConstantStruct>(arr->getOperand(i));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+      // There is a third *optional* element in global_ctor elements (``i8
+      // @data``).
+      assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
+             "unexpected element in ctor initializer list");
+#else
       assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
-
+#endif
       Constant *fp = cs->getOperand(1);
       if (!fp->isNullValue()) {
         if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(fp))
@@ -176,7 +180,7 @@ static Function *getStubFunctionForCtorList(Module *m,
     }
   }
 
-  ReturnInst::Create(getGlobalContext(), bb);
+  ReturnInst::Create(m->getContext(), bb);
 
   return fn;
 }
@@ -192,7 +196,7 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
 
     if (ctors)
     CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
-		     "", mainFn->begin()->begin());
+		     "", static_cast<Instruction *>(mainFn->begin()->begin()));
     if (dtors) {
       Function *dtorStub = getStubFunctionForCtorList(m, dtors, "klee.dtor_stub");
       for (Function::iterator it = mainFn->begin(), ie = mainFn->end();
@@ -243,11 +247,13 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
+  LLVMContext &ctx = module->getContext();
+
   if (!MergeAtExit.empty()) {
     Function *mergeFn = module->getFunction("klee_merge");
     if (!mergeFn) {
       LLVM_TYPE_Q llvm::FunctionType *Ty =
-        FunctionType::get(Type::getVoidTy(getGlobalContext()),
+        FunctionType::get(Type::getVoidTy(ctx),
                           std::vector<LLVM_TYPE_Q Type*>(), false);
       mergeFn = Function::Create(Ty, GlobalVariable::ExternalLinkage,
 				 "klee_merge",
@@ -266,28 +272,29 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                    name.c_str());
       }
 
-      BasicBlock *exit = BasicBlock::Create(getGlobalContext(), "exit", f);
+      BasicBlock *exit = BasicBlock::Create(ctx, "exit", f);
       PHINode *result = 0;
-      if (f->getReturnType() != Type::getVoidTy(getGlobalContext()))
+      if (f->getReturnType() != Type::getVoidTy(ctx))
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
         result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
 #else
 		result = PHINode::Create(f->getReturnType(), "retval", exit);
 #endif
       CallInst::Create(mergeFn, "", exit);
-      ReturnInst::Create(getGlobalContext(), result, exit);
+      ReturnInst::Create(ctx, result, exit);
 
       llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
       for (llvm::Function::iterator bbit = f->begin(), bbie = f->end();
            bbit != bbie; ++bbit) {
-        if (&*bbit != exit) {
+	BasicBlock *bb = static_cast<BasicBlock *>(bbit);
+        if (bb != exit) {
           Instruction *i = bbit->getTerminator();
           if (i->getOpcode()==Instruction::Ret) {
             if (result) {
-              result->addIncoming(i->getOperand(0), bbit);
+              result->addIncoming(i->getOperand(0), bb);
             }
             i->eraseFromParent();
-	    BranchInst::Create(exit, bbit);
+	    BranchInst::Create(exit, bb);
           }
         }
       }
@@ -298,7 +305,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
   // module.
-  PassManager pm;
+  LegacyLLVMPassManagerTy pm;
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
@@ -310,7 +317,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   pm.run(*module);
 
   if (opts.Optimize)
-    Optimize(module);
+    Optimize(module, opts.EntryPoint);
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   // Force importing functions required by intrinsic lowering. Kind of
   // unfortunate clutter when we don't need them but we won't know
@@ -319,19 +326,19 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // by name. We only add them if such a function doesn't exist to
   // avoid creating stale uses.
 
-  LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
+  LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(ctx);
   forceImport(module, "memcpy", PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
-              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+              targetData->getIntPtrType(ctx), (Type*) 0);
   forceImport(module, "memmove", PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
-              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+              targetData->getIntPtrType(ctx), (Type*) 0);
   forceImport(module, "memset", PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
-              Type::getInt32Ty(getGlobalContext()),
-              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+              Type::getInt32Ty(ctx),
+              targetData->getIntPtrType(ctx), (Type*) 0);
 #endif
   // FIXME: Missing force import for various math functions.
 
@@ -366,7 +373,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // linked in something with intrinsics but any external calls are
   // going to be unresolved. We really need to handle the intrinsics
   // directly I think?
-  PassManager pm3;
+  LegacyLLVMPassManagerTy pm3;
   pm3.add(createCFGSimplificationPass());
   switch(SwitchType) {
   case eSwitchTypeInternal: break;
@@ -377,7 +384,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   pm3.add(new IntrinsicCleanerPass(*targetData));
   pm3.add(new PhiCleanerPass());
   pm3.run(*module);
-
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   // For cleanliness see if we can discard any of the functions we
   // forced to import.
@@ -440,16 +446,13 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   infos = new InstructionInfoTable(module);
 
-  std::cout << "Detected function list : " << std::endl;
-
   for (Module::iterator it = module->begin(), ie = module->end();
        it != ie; ++it) {
     if (it->isDeclaration())
       continue;
 
-    KFunction *kf = new KFunction(it, this);
-
-    // std::cout << "    [*] function : " << kf->function->getName().str() << std::endl;
+    Function *fn = static_cast<Function *>(it);
+    KFunction *kf = new KFunction(fn, this);
 
     for (unsigned i=0; i<kf->numInstructions; ++i) {
       KInstruction *ki = kf->instructions[i];
@@ -457,7 +460,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     }
 
     functions.push_back(kf);
-    functionMap.insert(std::make_pair(it, kf));
+    functionMap.insert(std::make_pair(fn, kf));
   }
 
   /* Compute various interesting properties */
@@ -516,8 +519,13 @@ static int getOperandNum(Value *v,
     return registerMap[inst];
   } else if (Argument *a = dyn_cast<Argument>(v)) {
     return a->getArgNo();
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+    // Metadata is no longer a Value
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v)) {
+#else
   } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
              isa<MDNode>(v)) {
+#endif
     return -1;
   } else {
     assert(isa<Constant>(v));
@@ -534,7 +542,7 @@ KFunction::KFunction(llvm::Function *_function,
     trackCoverage(true) {
   for (llvm::Function::iterator bbit = function->begin(),
          bbie = function->end(); bbit != bbie; ++bbit) {
-    BasicBlock *bb = bbit;
+    BasicBlock *bb = static_cast<BasicBlock *>(bbit);
     basicBlockEntry[bb] = numInstructions;
     numInstructions += bb->size();
   }
@@ -549,7 +557,7 @@ KFunction::KFunction(llvm::Function *_function,
          bbie = function->end(); bbit != bbie; ++bbit) {
     for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
          it != ie; ++it)
-      registerMap[it] = rnum++;
+      registerMap[static_cast<Instruction *>(it)] = rnum++;
   }
   numRegisters = rnum;
 
@@ -569,22 +577,19 @@ KFunction::KFunction(llvm::Function *_function,
         ki = new KInstruction(); break;
       }
 
-      ki->inst = it;
-      ki->dest = registerMap[it];
+      Instruction *inst = static_cast<Instruction *>(it);
+      ki->inst = inst;
+      ki->dest = registerMap[inst];
 
       if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-
-        // llvm::errs() << "[Inception]\t Allocating registers for instruction: " << *(ki->inst) << "\n";
-
-        CallSite cs(it);
+        CallSite cs(inst);
         unsigned numArgs = cs.arg_size();
         ki->operands = new int[numArgs+1];
         ki->operands[0] = getOperandNum(cs.getCalledValue(), registerMap, km,
                                         ki);
         for (unsigned j=0; j<numArgs; j++) {
           Value *v = cs.getArgument(j);
-          auto num = getOperandNum(v, registerMap, km, ki);
-          ki->operands[j+1] = num;
+          ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
         }
       } else {
         unsigned numOperands = it->getNumOperands();

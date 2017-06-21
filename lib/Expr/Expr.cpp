@@ -70,6 +70,13 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
   }
 }
 
+int Expr::compare(const Expr &b) const {
+  static ExprEquivSet equivs;
+  int r = compare(b, equivs);
+  equivs.clear();
+  return r;
+}
+
 // returns 0 if b is structurally equal to *this
 int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
   if (this == &b)
@@ -533,14 +540,27 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
   // a smart UpdateList so it is not worth rescanning.
 
   const UpdateNode *un = ul.head;
-  for (; un; un = un->next) {
+  bool updateListHasSymbolicWrites = false;
+  for (; un; un=un->next) {
     ref<Expr> cond = EqExpr::create(index, un->index);
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       if (CE->isTrue())
         return un->value;
     } else {
+      updateListHasSymbolicWrites = true;
       break;
+    }
+  }
+
+  if (ul.root->isConstantArray() && !updateListHasSymbolicWrites) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
+      assert(CE->getWidth() <= 64 && "Index too large");
+      uint64_t concreteIndex = CE->getZExtValue();
+      uint64_t size = ul.root->size;
+      if (concreteIndex < size) {
+        return ul.root->constantValues[concreteIndex];
+      }
     }
   }
 

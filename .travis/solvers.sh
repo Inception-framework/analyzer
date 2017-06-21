@@ -17,8 +17,7 @@ for solver in ${SOLVER_LIST}; do
     ;;
   Z3)
     echo "Z3"
-    # Should we install libz3-dbg too?
-    sudo apt-get -y install libz3 libz3-dev
+    ${KLEE_SRC}/.travis/z3.sh
     ;;
   metaSMT)
     echo "metaSMT"

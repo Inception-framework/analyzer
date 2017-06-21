@@ -1,7 +1,7 @@
 dnl **************************************************************************
 dnl * Initialize
 dnl **************************************************************************
-AC_INIT([[KLEE]],[[1.2.0]],[[klee-dev@imperial.ac.uk]],[[klee-]],[[https://klee.github.io]])
+AC_INIT([[KLEE]],[[1.3.0]],[[klee-dev@imperial.ac.uk]],[[klee-]],[[https://klee.github.io]])
 
 dnl Identify where LLVM source tree is (this is patched by
 dnl AutoRegen.sh)
@@ -380,6 +380,19 @@ klee_check_bc "${klee_llvm_bc_cxx_compiler}" "cpp" "CXX"
 dnl Set variable for Makefile.config
 AC_SUBST(KLEE_BITCODE_C_COMPILER,$klee_llvm_bc_c_compiler)
 AC_SUBST(KLEE_BITCODE_CXX_COMPILER,$klee_llvm_bc_cxx_compiler)
+
+dnl **************************************************************************
+dnl User option to disable timestamping.
+
+AC_ARG_ENABLE([timestamp],AS_HELP_STRING([--enable-timestamp],
+	[Enable timestamping the source code while building. (default=disabled)]))
+
+if test "x${enable_timestamp}" = "xyes" ; then
+  AC_DEFINE(KLEE_ENABLE_TIMESTAMP,[1],[Enable time stamping the sources])
+  AC_MSG_NOTICE([Source timestamping enabled.])
+else
+  AC_MSG_NOTICE([Source timestamping disabled.])
+fi
 
 dnl **************************************************************************
 dnl User option to enable uClibc support.
@@ -790,16 +803,23 @@ else
   dnl AC_LANG(C++)
   old_CPPFLAGS="$CPPFLAGS"
   old_LDFLAGS="$LDFLAGS"
+  old_LIBS="$LIBS"
   CPPFLAGS="$CPPFLAGS -I$metasmt_root/include"
-  LDFLAGS="$LDFLAGS -L$metasmt_root/lib -lmetaSMT"
+  LDFLAGS="$LDFLAGS -L$metasmt_root/lib"
+  LIBS="$LIBS -lmetaSMT"
+
   AC_CHECK_HEADERS([$metasmt_root/include/metaSMT/DirectSolver_Context.hpp $metasmt_root/include/metaSMT/frontend/QF_BV.hpp],, [
          AC_MSG_ERROR([Unable to use $metasmt_root/include/metaSMT/DirectSolver_Context.hpp header])
   ])
+  AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])
   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM([#include $metasmt_root/include/metaSMT/frontend/QF_BV.hpp], [metaSMT::logic::QF_BV::new_bitvector(3)])],
-      [],[AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])],[AC_MSG_ERROR([Unable to link with libmetaSMT])])
+      [AC_LANG_PROGRAM([#include <metaSMT/frontend/QF_BV.hpp>], [metaSMT::logic::QF_BV::new_bitvector(3)])],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])
+             AC_MSG_ERROR([Unable to link with libmetaSMT])])
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
+  LIBS="$old_LIBS"
 
   AC_DEFINE(ENABLE_METASMT, 1, [Enable metaSMT API])
   AC_SUBST(METASMT_ROOT,$metasmt_root)

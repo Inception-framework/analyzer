@@ -177,6 +177,16 @@ ExecutionState &BFSSearcher::selectState() {
 void BFSSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
+  // Assumption: If new states were added KLEE forked, therefore states evolved.
+  // constraints were added to the current state, it evolved.
+  if (!addedStates.empty() && current &&
+      std::find(removedStates.begin(), removedStates.end(), current) ==
+          removedStates.end()) {
+    assert(states.front() == current);
+    states.pop_front();
+    states.push_back(current);
+  }
+
   states.insert(states.end(),
                 addedStates.begin(),
                 addedStates.end());
@@ -475,6 +485,8 @@ Instruction *MergingSearcher::getMergePoint(ExecutionState &es) {
 }
 
 ExecutionState &MergingSearcher::selectState() {
+  // FIXME: this loop is endless if baseSearcher includes RandomPathSearcher.
+  // The reason is that RandomPathSearcher::removeState() does nothing...
   while (!baseSearcher->empty()) {
     ExecutionState &es = baseSearcher->selectState();
     if (getMergePoint(es)) {
@@ -600,8 +612,8 @@ ExecutionState &BatchingSearcher::selectState() {
     if (lastState) {
       double delta = util::getWallTime()-lastStartTime;
       if (delta>timeBudget*1.1) {
-        llvm::errs() << "KLEE: increased time budget from " << timeBudget
-                     << " to " << delta << "\n";
+        klee_message("increased time budget from %f to %f\n", timeBudget,
+                     delta);
         timeBudget = delta;
       }
     }
@@ -674,7 +686,7 @@ void IterativeDeepeningTimeSearcher::update(
 
   if (baseSearcher->empty()) {
     time *= 2;
-    llvm::errs() << "KLEE: increasing time budget to: " << time << "\n";
+    klee_message("increased time budget to %f\n", time);
     std::vector<ExecutionState *> ps(pausedStates.begin(), pausedStates.end());
     baseSearcher->update(0, ps, std::vector<ExecutionState *>());
     pausedStates.clear();

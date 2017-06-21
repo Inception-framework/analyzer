@@ -29,12 +29,14 @@ extern llvm::cl::opt<bool> UseForkedCoreSolver;
 
 extern llvm::cl::opt<bool> CoreSolverOptimizeDivides;
 
+extern llvm::cl::opt<bool> UseAssignmentValidatingSolver;
+
 ///The different query logging solvers that can switched on/off
 enum QueryLoggingSolverType
 {
-    ALL_PC,       ///< Log all queries (un-optimised) in .pc (KQuery) format
+    ALL_KQUERY,   ///< Log all queries (un-optimised) in .kquery (KQuery) format
     ALL_SMTLIB,   ///< Log all queries (un-optimised)  .smt2 (SMT-LIBv2) format
-    SOLVER_PC,    ///< Log queries passed to solver (optimised) in .pc (KQuery) format
+    SOLVER_KQUERY,///< Log queries passed to solver (optimised) in .kquery (KQuery) format
     SOLVER_SMTLIB ///< Log queries passed to solver (optimised) in .smt2 (SMT-LIBv2) format
 };
 
@@ -44,8 +46,16 @@ enum QueryLoggingSolverType
  */
 extern llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions;
 
-enum CoreSolverType { STP_SOLVER, METASMT_SOLVER, DUMMY_SOLVER, Z3_SOLVER };
+enum CoreSolverType {
+  STP_SOLVER,
+  METASMT_SOLVER,
+  DUMMY_SOLVER,
+  Z3_SOLVER,
+  NO_SOLVER
+};
 extern llvm::cl::opt<CoreSolverType> CoreSolverToUse;
+
+extern llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith;
 
 #ifdef ENABLE_METASMT
 
@@ -62,8 +72,7 @@ extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
 
 //A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
 template <typename T>
-static bool optionIsSet(llvm::cl::list<T> list, T option)
-{
+static bool optionIsSet(llvm::cl::list<T> &list, T option) {
     return std::find(list.begin(), list.end(), option) != list.end();
 }
 
