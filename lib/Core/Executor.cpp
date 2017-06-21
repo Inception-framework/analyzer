@@ -113,7 +113,10 @@ using namespace llvm;
 using namespace klee;
 
 
-
+#include "inception/RealContextSaver.h"
+#include "inception/RealInterrupt.h"
+#include "inception/RealTarget.h"
+#include "inception/RealMemory.h"
 
 
 namespace {
@@ -357,6 +360,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString) {
+
+  Inception::RealMemory::init();
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
@@ -1543,9 +1548,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {
+    bool interrupted = false;
     ReturnInst *ri = cast<ReturnInst>(i);
     KInstIterator kcaller = state.stack.back().caller;
     Instruction *caller = kcaller ? kcaller->inst : 0;
+
+    if(Inception::RealInterrupt::is_interrupted()) {
+      // llvm::errs() << " Return from  " << caller->getParent()->getParent()->getName() << "\n";
+      // llvm::errs() << " Expected from  " << Inception::RealInterrupt::caller->getName() << "\n";
+      if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
+        interrupted = true;
+        Inception::RealInterrupt::stop_interrupt();
+      }
+    }
+
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
 
@@ -1601,7 +1617,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // We check that the return value has no users instead of
         // checking the type, since C defaults to returning int for
         // undeclared functions.
-        if (!caller->use_empty()) {
+        if (!caller->use_empty() && !interrupted) {
           terminateStateOnExecError(state, "return void when caller expected a result");
         }
       }
@@ -2798,22 +2814,34 @@ void Executor::run(ExecutionState &initialState) {
 
   searcher = constructUserSearcher(*this);
 
+  Inception::RealInterrupt::init(this);
+
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
+  // unsigned cycleCounter = 0;
+  std::string* last = 0;
   while (!states.empty() && !haltExecution) {
-    ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
-
-    executeInstruction(state, ki);
-    processTimers(&state, MaxInstructionTime);
-
+    // if( cycleCounter++ != 0 && (cycleCounter % 1000) == 0)
+    // Inception::RealInterrupt::raise(57);
+    //RealInterrupt returns the next interrupt state
+    pstate = Inception::RealInterrupt::next_without_priority();
+    if(pstate == NULL) {
+      pstate = &(searcher->selectState());
+      if(pstate->description.empty())
+        pstate->description = "MainState";
+    }
+    if( last != &(pstate->description) ) {
+      last = &(pstate->description);
+      // llvm::errs()<<" Executing : "<<pstate->description<<"\n";
+    }
+    KInstruction *ki = pstate->pc;
+    stepInstruction(*pstate);
+    executeInstruction(*pstate, ki);
+    processTimers(pstate, MaxInstructionTime);
     checkMemoryUsage();
-
-    updateStates(&state);
-  }
-
+    updateStates(pstate);
+   }
   delete searcher;
   searcher = 0;
 
