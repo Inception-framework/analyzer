@@ -4,14 +4,16 @@ LLVM_VERSION=3.6
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+./autoconf/AutoRegen.sh $DIR/../tools/llvm/llvm3.6/
+
 CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
             --enable-cxx11 \
             --with-stp=$DIR/../tools/stp/ \
             --enable-posix-runtime \
             --with-llvmsrc=$DIR/../tools/llvm/llvm$LLVM_VERSION \
-            --with-llvmobj=$DIR/../tools/llvm/llvm$LLVM_VERSION \
-            --with-llvmcc=$DIR/../tools/llvm/llvm$LLVM_VERSION/Debug+Asserts/bin/clang \
-            --with-llvmcxx=$DIR/../tools/llvm/llvm$LLVM_VERSION/Debug+Asserts/bin/clang++ \
+            --with-llvmobj=$DIR/../tools/llvm/build_debug \
+            --with-llvmcc=$DIR/../tools/llvm/build_debug/Debug+Asserts/bin/clang \
+            --with-llvmcxx=$DIR/../tools/llvm/build_debug/Debug+Asserts/bin/clang++ \
             --with-uclibc=$DIR/../tools/klee-uclibc \
             --with-runtime='Debug+Asserts'
 
