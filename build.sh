@@ -34,9 +34,9 @@ fi
 
 
 
-echo "Press any key to install klee"
+#echo "Press any key to install klee"
 
-read i
+#read i
 
 sudo -S rm /usr/bin/klee
 sudo -S ln -s $DIR/Debug+Asserts/bin/klee /usr/bin/klee
