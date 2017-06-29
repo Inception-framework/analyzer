@@ -1,3 +1,4 @@
+# build script
 make clean
 
 LLVM_VERSION=3.6
