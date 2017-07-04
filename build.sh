@@ -4,6 +4,8 @@ LLVM_VERSION=3.6
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+./autoconf/AutoRegen.sh
+
 CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
             --enable-cxx11 \
             --with-stp=$DIR/../tools/stp/ \
@@ -13,7 +15,8 @@ CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
             --with-llvmcc=$DIR/../tools/llvm/llvm$LLVM_VERSION/Debug+Asserts/bin/clang \
             --with-llvmcxx=$DIR/../tools/llvm/llvm$LLVM_VERSION/Debug+Asserts/bin/clang++ \
             --with-uclibc=$DIR/../tools/klee-uclibc \
-            --with-runtime='Debug+Asserts'
+            --with-runtime='Debug+Asserts' \
+	    --with-llvm-build-mode='Debug+Asserts'
 
 if [ $? != 0 ]; then
         echo "FAIL to configure Klee !"

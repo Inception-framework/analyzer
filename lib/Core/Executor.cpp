@@ -1545,6 +1545,38 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
+
+  // std::string srcFile = ki->info->file;
+  // if (srcFile.length() > 42)
+  //   srcFile = srcFile.substr(42);
+  //
+  // std::string debug = std::to_string(ki->info->line)+" of "+srcFile+"\n";
+  //
+  // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+  // << i->getParent()->getParent()->getName() << "\n";
+  //
+  // llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
+
+  // std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+  // std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+  //
+  // int stack_idx = 0;
+  //
+  // errs() << "asm line " << ki->info->assemblyLine << "\n";
+  // while (stackSeek != stackEnd) {
+  //   errs() << "stack idx " << stack_idx << " in ";
+  //   errs() << stackSeek->kf->function->getName();
+  //   if (stackSeek->caller) {
+  //     errs() << " line " << stackSeek->caller->info->assemblyLine;
+  //     errs() << "\n";
+  //   } else {
+  //     errs() << " no caller\n";
+  //   }
+  //   ++stackSeek;
+  //   ++stack_idx;
+  // }
+  // std::cerr << std::endl;
+
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {
@@ -2157,7 +2189,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
-    executeMemoryOperation(state, true, base, value, 0);
+    executeMemoryOperation(state, true, base, value, ki);
     break;
   }
 
@@ -3383,11 +3415,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
        uint64_t concrete_value = value_ce->getZExtValue();
 
        Inception::RealTarget::write(concrete_address, concrete_value, type);
-       // std::string srcFile = target->info->file;
-       // if (srcFile.length() > 82)
-       //   srcFile = srcFile.substr(82);
-       // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-       // printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
+      //  std::string srcFile = target->info->file;
+      //  if (srcFile.length() > 42)
+        //  srcFile = srcFile.substr(42);
+      //  std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+      //  printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
        return;
      } else {
 
@@ -3403,11 +3435,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                                       &concrete_value, type);
        bindLocal(target, state, result);
 
-       // std::string srcFile = target->info->file;
-       // if (srcFile.length() > 82)
-       //   srcFile = srcFile.substr(82);
-       // std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-       // printf("[RealRead] *0x%08x -> 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
+      //  std::string srcFile = target->info->file;
+      //  if (srcFile.length() > 42)
+        //  srcFile = srcFile.substr(42);
+      //  std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
+      //  printf("[RealRead] *0x%08x -> 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
        return;
      }
    }
@@ -3522,6 +3554,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else {
+
+      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+      uint64_t concrete_address = address_ce->getZExtValue();
+
+      errs() << "At address : " << concrete_address;
+
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));
     }

@@ -20,6 +20,7 @@ std::map<uint32_t, Interrupt*> RealInterrupt::interrupts_vector;
 //INTERRUPTS QUEUE
 std::priority_queue<Interrupt*, std::vector<Interrupt*>, InterruptComparator> RealInterrupt::pending_interrupts;
 
+bool RealInterrupt::enabled = false;
 
 //INTERNAL VARIABLES
 
@@ -71,7 +72,7 @@ void RealInterrupt::raise(int id) {
   try {
     Interrupt* interrupt = interrupts_vector.at(id);
 
-    // llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
+    llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
 
     //When added the priority_queue will sort the queue
     //according to the user defined priority
@@ -106,10 +107,11 @@ ExecutionState* RealInterrupt::next_without_priority() {
     if( RealInterrupt::is_interrupted() )
       return RealInterrupt::interrupt_state;
 
-    if(!RealInterrupt::pending_interrupts.empty())
-      return  create_interrupt_state();
-    else
-      return NULL;
+    if( RealInterrupt::enabled )
+      if(!RealInterrupt::pending_interrupts.empty())
+        return  create_interrupt_state();
+
+    return NULL;
 }
 
 /*
@@ -160,14 +162,14 @@ ExecutionState* RealInterrupt::getPending() {
 }
 
 bool RealInterrupt::masked() {
-  return false;
+  return RealInterrupt::enabled;
 }
 
 void RealInterrupt::stop_interrupt() {
 
   Interrupt *interrupt = RealInterrupt::current_interrupt;
 
-  jtag_write(RealTarget::inception_device, 0x10004000 + (interrupt->id * 4), 0, 32);
+  jtag_write(RealTarget::inception_device, 0x20003000 + (interrupt->id * 4), 0, 32);
 
   RealInterrupt::interrupted = false;
 
@@ -214,8 +216,8 @@ ExecutionState* RealInterrupt::create_interrupt_state() {
   Function *f_interrupt = RealInterrupt::executor->getKModule()->module->getFunction(function_name);
   if(f_interrupt == NULL)
     klee_error("[RealInterrupt] Fail to resolve interrupt handler name : ", function_name.str());
-  // else
-  //   llvm::errs() << "[RealInterrupt] Raise " << function_name << " from " << Inception::RealInterrupt::caller->getName() <<"\n";
+  else
+    llvm::errs() << "[RealInterrupt] Raise " << function_name << " from " << Inception::RealInterrupt::caller->getName() <<"\n";
 
   //Copy the current state
   ExecutionState *_interrupt_state = current->branch();
@@ -286,6 +288,14 @@ ExecutionState* RealInterrupt::create_interrupt_state() {
 
   interrupt_state->pc = kf->instructions;
   return interrupt_state;
+}
+
+void RealInterrupt::enable() {
+ enabled = true;
+}
+
+void RealInterrupt::disable() {
+ enabled = false;
 }
 
 }

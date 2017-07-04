@@ -111,6 +111,12 @@ namespace Inception{
 
     static klee::ExecutionState* getPending();
 
+    static bool enabled;
+
+    static void disable();
+
+    static void enable();
+
   private:
 
     static std::map<uint32_t, Interrupt*> interrupts_vector;

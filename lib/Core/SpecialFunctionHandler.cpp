@@ -40,6 +40,8 @@
 
 #include <errno.h>
 
+#include "inception/RealInterrupt.h"
+
 using namespace llvm;
 using namespace klee;
 
@@ -139,6 +141,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
   add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
   add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
+
+  add("inception_dump_registers", handleDumpRegisters, true),
+  add("disable_irq", handleDisableIRQ, true),
+  add("enable_irq", handleEnableIRQ, true),
 
 #undef addDNR
 #undef add
@@ -780,4 +786,22 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
                                                std::vector<ref<Expr> > &arguments) {
   executor.terminateStateOnError(state, "overflow on division or remainder",
                                  Executor::Overflow);
+}
+
+void SpecialFunctionHandler::handleDumpRegisters(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+
+}
+
+void SpecialFunctionHandler::handleEnableIRQ(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+  Inception::RealInterrupt::enable();
+}
+
+void SpecialFunctionHandler::handleDisableIRQ(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+  Inception::RealInterrupt::disable();
 }
