@@ -100,6 +100,9 @@ public:
     virtual void run() = 0;
   };
 
+  /// Get textual information regarding a memory address.
+  std::string getAddressInfo(ExecutionState &state, ref<Expr> address) const;
+
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
 
   enum TerminateReason {
@@ -388,8 +391,6 @@ private:
   /// function may fork state if the state has multiple seeds.
   void executeGetValue(ExecutionState &state, ref<Expr> e, KInstruction *target);
 
-  /// Get textual information regarding a memory address.
-  std::string getAddressInfo(ExecutionState &state, ref<Expr> address) const;
 
   // Determines the \param lastInstruction of the \param state which is not KLEE
   // internal and returns its InstructionInfo

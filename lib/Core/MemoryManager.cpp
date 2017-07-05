@@ -167,6 +167,30 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
   return res;
 }
 
+MemoryObject *MemoryManager::allocateStack(uint64_t address, uint64_t size, bool isLocal,
+                                      bool isGlobal,
+                                      const llvm::Value *allocSite,
+                                      size_t alignment) {
+  if (size > 10 * 1024 * 1024)
+  klee_warning_once(0, "Large alloc: %lu bytes.  KLEE may run out of memory.",
+                    size);
+
+  // Return NULL if size is zero, this is equal to error during allocation
+  if (NullOnZeroMalloc && size == 0)
+    return 0;
+
+  if (!llvm::isPowerOf2_64(alignment)) {
+    klee_warning("Only alignment of power of two is supported");
+    return 0;
+  }
+
+  ++stats::allocations;
+  MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
+                                       allocSite, this);
+  objects.insert(res);
+  return res;
+}
+
 void MemoryManager::deallocate(const MemoryObject *mo) { assert(0); }
 
 void MemoryManager::markFreed(MemoryObject *mo) {

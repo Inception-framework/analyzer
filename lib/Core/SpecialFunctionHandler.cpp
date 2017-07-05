@@ -41,6 +41,7 @@
 #include <errno.h>
 
 #include "inception/RealInterrupt.h"
+#include "inception/Monitor.h"
 
 using namespace llvm;
 using namespace klee;
@@ -791,7 +792,7 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
 void SpecialFunctionHandler::handleDumpRegisters(ExecutionState &state,
                               KInstruction *target,
                               std::vector<ref<Expr> > &arguments) {
-
+  Inception::Monitor::dump();
 }
 
 void SpecialFunctionHandler::handleEnableIRQ(ExecutionState &state,

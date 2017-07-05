@@ -117,6 +117,7 @@ using namespace klee;
 #include "inception/RealInterrupt.h"
 #include "inception/RealTarget.h"
 #include "inception/RealMemory.h"
+#include "inception/Monitor.h"
 
 
 namespace {
@@ -362,6 +363,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       debugInstFile(0), debugLogBuffer(debugBufferString) {
 
   Inception::RealMemory::init();
+  Inception::Monitor::init(this);
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
@@ -605,6 +607,30 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
+
+    //XXX: Inception stack handling
+    if( i->getName().equals(StringRef("STACK")) ) {
+
+       klee_warning("This code contains reversed assembly code.");
+
+       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
+
+       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+
+       MemoryObject *mo = memory->allocateStack((uint64_t)(unsigned long)0x10000000, size, false, true, &*i, 4);
+
+       if (!mo)
+         llvm::report_fatal_error("out of memory");
+
+       ObjectState *os = bindObjectInState(state, mo, false);
+       globalObjects.insert(std::make_pair(i, mo));
+       globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+
+       if (!i->hasInitializer())
+         os->initializeToRandom();
+       continue;
+    }
+
     const GlobalVariable *v = static_cast<const GlobalVariable *>(i);
     size_t globalObjectAlignment = getAllocationAlignment(v);
     if (i->isDeclaration()) {
@@ -699,6 +725,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
 
       initializeGlobalObject(state, wos, i->getInitializer(), 0);
+      Inception::Monitor::follow(&*i, mo->address);
       // if(i->isConstant()) os->setReadOnly(true);
     }
   }
@@ -2888,6 +2915,27 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   uint64_t example;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
     example = CE->getZExtValue();
+
+    ObjectPair op;
+    bool success;
+
+    solver->setTimeout(coreSolverTimeout);
+    if (state.addressSpace.resolveOne(state, solver, address, op, success)) {
+
+      const MemoryObject *mo = op.first;
+
+      ref<Expr> offset = mo->getOffsetExpr(address);
+
+      const ObjectState *os = state.addressSpace.findObject(mo);
+      assert(os);
+
+      ref<Expr> result = os->read(offset, Expr::Int32);
+
+      info << "\tvalue: " << result << "\n";
+
+    }
+    solver->setTimeout(0);
+
   } else {
     ref<ConstantExpr> value;
     bool success = solver->getValue(state, address, value);
