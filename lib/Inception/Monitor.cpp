@@ -1,5 +1,7 @@
 #include "inception/Monitor.h"
 
+#include <fstream>
+
 // #include <thread>
 // #include <curl/curl.h>
 #include "klee/Internal/Support/ErrorHandling.h"
@@ -79,6 +81,11 @@ void Monitor::dump() {
     std::string info = executor->getAddressInfo(*state, address_ce);
 
     llvm::errs() << "Register : " << b->first << " " << info;
+
+    std::ofstream log_file;
+    log_file.open ("registers.dump", std::ios::out | std::ios::app);
+    log_file << info;
+    log_file.close();
   }
 }
 
