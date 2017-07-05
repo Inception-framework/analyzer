@@ -84,7 +84,7 @@ void Monitor::dump() {
 
     std::ofstream log_file;
     log_file.open ("registers.dump", std::ios::out | std::ios::app);
-    log_file << info;
+    log_file << "Register : " << b->first << " " << info;
     log_file.close();
   }
 }

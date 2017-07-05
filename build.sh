@@ -5,11 +5,8 @@ LLVM_VERSION=3.6
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-<<<<<<< HEAD
-./autoconf/AutoRegen.sh
-=======
+#./autoconf/AutoRegen.sh
 ./autoconf/AutoRegen.sh $DIR/../tools/llvm/llvm3.6/
->>>>>>> 2a09de495a0a5921e0fe47856993eea0156d9b36
 
 CXXFLAGS="-g3 -O0 -fexceptions" CFLAGS="-g3 -O0" ./configure \
             --enable-cxx11 \
