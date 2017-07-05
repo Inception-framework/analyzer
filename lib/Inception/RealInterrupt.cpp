@@ -20,7 +20,7 @@ std::map<uint32_t, Interrupt*> RealInterrupt::interrupts_vector;
 //INTERRUPTS QUEUE
 std::priority_queue<Interrupt*, std::vector<Interrupt*>, InterruptComparator> RealInterrupt::pending_interrupts;
 
-bool RealInterrupt::enabled = false;
+bool RealInterrupt::enabled = true;
 
 //INTERNAL VARIABLES
 
