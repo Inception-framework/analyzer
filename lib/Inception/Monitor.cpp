@@ -44,7 +44,7 @@ void Monitor::follow(const llvm::GlobalVariable* i, uint64_t address) {
 
   try{
 
-    llvm::errs() << "Should I follow : " << i->getName() << "\n";
+    // llvm::errs() << "Should I follow : " << i->getName() << "\n";
 
     std::map<std::string, uint64_t>::iterator it = Monitor::followed.find(i->getName());
     if (it != Monitor::followed.end())
@@ -52,7 +52,7 @@ void Monitor::follow(const llvm::GlobalVariable* i, uint64_t address) {
     else
       return;
 
-    klee_warning("Monitor is watching one register more...");
+    // klee_warning("Monitor is watching one register more...");
 
   }
   catch (const std::out_of_range& oor) {
@@ -80,10 +80,9 @@ void Monitor::dump() {
 
     std::string info = executor->getAddressInfo(*state, address_ce);
 
-    llvm::errs() << "Register : " << b->first << " " << info;
-
     std::ofstream log_file;
     log_file.open ("registers.dump", std::ios::out | std::ios::app);
+    log_file << b->first << "\n";
     log_file << info;
     log_file.close();
   }
