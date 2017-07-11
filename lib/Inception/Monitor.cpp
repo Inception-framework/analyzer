@@ -30,6 +30,7 @@ std::map<std::string, uint64_t> Monitor::followed = {
   {std::pair<std::string, uint64_t>("R9",0)},
   {std::pair<std::string, uint64_t>("R10",0)},
   {std::pair<std::string, uint64_t>("R11",0)},
+  {std::pair<std::string, uint64_t>("R12",0)},
   {std::pair<std::string, uint64_t>("LR",0)},
   {std::pair<std::string, uint64_t>("SP",0)},
   {std::pair<std::string, uint64_t>("PC",0)},
