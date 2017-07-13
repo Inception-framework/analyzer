@@ -187,6 +187,9 @@ MemoryObject *MemoryManager::allocateStack(uint64_t address, uint64_t size, bool
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
                                        allocSite, this);
+
+   res->isFixed = true;
+
   objects.insert(res);
   return res;
 }
