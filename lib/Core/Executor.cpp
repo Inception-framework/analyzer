@@ -617,7 +617,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
        uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
-       MemoryObject *mo = memory->allocateStack((uint64_t)(unsigned long)0x10000000, size, false, true, &*i, 4);
+       MemoryObject *mo = memory->allocateStack((uint64_t)(unsigned long)0x20001000, size, false, true, &*i, 4);
 
        if (!mo)
          llvm::report_fatal_error("out of memory");
