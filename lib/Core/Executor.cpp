@@ -2920,7 +2920,10 @@ std::string Executor::getAddressInfo(ExecutionState &state,
     bool success;
 
     solver->setTimeout(coreSolverTimeout);
-    if (state.addressSpace.resolveOne(state, solver, address, op, success)) {
+
+    state.addressSpace.resolveOne(state, solver, address, op, success);
+
+    if (success) {
 
       const MemoryObject *mo = op.first;
 
@@ -2933,18 +2936,19 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 
       info << "\tvalue: " << result << "\n";
 
+    } else {
+
+      ref<ConstantExpr> value;
+      bool success = solver->getValue(state, address, value);
+      assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
+      example = value->getZExtValue();
+      info << "\texample: " << example << "\n";
+      std::pair< ref<Expr>, ref<Expr> > res = solver->getRange(state, address);
+      info << "\trange: [" << res.first << ", " << res.second <<"]\n";
+
     }
     solver->setTimeout(0);
-
-  } else {
-    ref<ConstantExpr> value;
-    bool success = solver->getValue(state, address, value);
-    assert(success && "FIXME: Unhandled solver failure");
-    (void) success;
-    example = value->getZExtValue();
-    info << "\texample: " << example << "\n";
-    std::pair< ref<Expr>, ref<Expr> > res = solver->getRange(state, address);
-    info << "\trange: [" << res.first << ", " << res.second <<"]\n";
   }
 
   MemoryObject hack((unsigned) example);
