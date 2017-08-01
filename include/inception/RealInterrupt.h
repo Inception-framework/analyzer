@@ -32,7 +32,9 @@ namespace Inception{
 
   typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
 
-  #endif
+  typedef void (*ParserIrqIDBaseAddrCB)(uint32_t);
+
+#endif
 
   class Interrupt{
 
@@ -117,7 +119,10 @@ namespace Inception{
 
     static void enable();
 
+    static void set_irq_id_base_addr(uint32_t address);
+
   private:
+    static uint32_t irq_id_base_addr;
 
     static std::map<uint32_t, Interrupt*> interrupts_vector;
 

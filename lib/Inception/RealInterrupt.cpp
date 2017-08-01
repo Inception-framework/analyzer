@@ -36,8 +36,7 @@ klee::Executor* RealInterrupt::executor = NULL;
 
 bool RealInterrupt::ending = false;
 
-
-
+uint32_t RealInterrupt::irq_id_base_addr = NULL;
 
 RealInterrupt::RealInterrupt(){}
 
@@ -51,6 +50,9 @@ void RealInterrupt::init(klee::Executor* _executor) {
 
   while( Configurator::next_interrupt(callback) == true );
 
+  ParserIrqIDBaseAddrCB callback_irq = &RealInterrupt::set_irq_id_base_addr;
+  Configurator::get_irq_id_base_addr(callback_irq);
+
   //configure trace
   if(RealTarget::inception_device == NULL)
     RealTarget::inception_device = jtag_init();
@@ -58,6 +60,12 @@ void RealInterrupt::init(klee::Executor* _executor) {
   Watcher watcher = &RealInterrupt::raise;
   // Watcher watcher = &watch_and_avoid;
   trace_init(Inception::RealTarget::inception_device, watcher);
+}
+
+void RealInterrupt::set_irq_id_base_addr(uint32_t address) {
+  printf("set_irq_base_addr(0x%08x)\n", address);
+
+  irq_id_base_addr = address;
 }
 
 void RealInterrupt::AddInterrupt(std::string handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority) {
@@ -169,8 +177,8 @@ void RealInterrupt::stop_interrupt() {
 
   Interrupt *interrupt = RealInterrupt::current_interrupt;
 
-  jtag_write(RealTarget::inception_device, 0x10004000 + (interrupt->id * 4), 0,
-             32);
+  jtag_write(RealTarget::inception_device,
+             irq_id_base_addr + (interrupt->id * 4), 0, 32);
 
   RealInterrupt::interrupted = false;
 

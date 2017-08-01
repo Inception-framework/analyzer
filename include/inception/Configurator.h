@@ -4,20 +4,20 @@
 
 namespace Inception {
 
-  #ifndef PARSER_CALLBACK
-  #define PARSER_CALLBACK
+#ifndef PARSER_CALLBACK
+#define PARSER_CALLBACK
 
-  typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
+typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
 
-  typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
+typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
 
-  #endif
+typedef void (*ParserIrqIDBaseAddrCB)(uint32_t);
 
+#endif
 
-class Configurator{
+class Configurator {
 
-  public :
-
+public:
   Configurator();
   ~Configurator();
 
@@ -32,6 +32,8 @@ class Configurator{
   static unsigned int interrupt_index;
 
   static bool next_memory(ParserMemoryCB callback);
+
+  static bool get_irq_id_base_addr(ParserIrqIDBaseAddrCB callback);
 
   static unsigned int memory_index;
 
