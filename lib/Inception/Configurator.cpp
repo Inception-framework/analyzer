@@ -131,4 +131,26 @@ bool Configurator::next_interrupt(ParserInterruptCB callback) {
   return false;
 }
 
+bool Configurator::get_irq_id_base_addr(ParserIrqIDBaseAddrCB callback) {
+
+  Configurator::init();
+
+  if (Configurator::file_present == false)
+    return false;
+
+  const Json::Value IrqIDBaseAddr = (*Configurator::root)["IrqIDBaseAddr"];
+
+  uint32_t address;
+
+  std::stringstream ss;
+
+  std::string s_address = IrqIDBaseAddr[0].get("address", "0").asString();
+  ss << std::hex << s_address;
+  ss >> address;
+  ss.clear();
+
+  callback(address);
+
+  return true;
+}
 }
