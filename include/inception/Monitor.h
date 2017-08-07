@@ -9,27 +9,26 @@
 #define MONITOR_H_
 
 #include <iostream>
+#include <map>
 #include <stdint.h>
 #include <string>
-#include <map>
 
 #include "llvm/IR/Instructions.h"
 
-#include "klee/Expr.h"
 #include "../Core/Executor.h"
+#include "klee/Expr.h"
 
 using namespace klee;
 
 namespace klee {
-  class Executor;
+class Executor;
 }
 
 namespace Inception {
 
 class Monitor {
 
-  public :
-
+public:
   Monitor();
 
   ~Monitor();
@@ -38,19 +37,35 @@ class Monitor {
 
   static bool running;
 
-  static klee::Executor* executor;
+  static klee::Executor *executor;
 
   static std::map<std::string, uint64_t> followed;
 
-  static void follow(const llvm::GlobalVariable* i, uint64_t address);
+  static void follow(const llvm::GlobalVariable *i, uint64_t address);
 
   static void dump();
 
   static void dump_stack(int begin, int end);
 
-  static void init(Executor* _executor);
+  static void init(Executor *_executor);
 
+  static void trace(ExecutionState &state, KInstruction *ki);
+
+  static bool trace_on;
+
+  static bool trace_io_on;
+
+  static bool enableInstructionTrace() { trace_on = true; }
+
+  static bool disableInstructionTrace() { trace_on = false; }
+
+  static bool enableMemTrace() { trace_io_on = true; }
+
+  static bool disableMemTrace() { trace_io_on = false; }
+
+  static void traceIO(ref<Expr> address, ref<Expr> value, bool isWrite,
+                      KInstruction *target);
 };
 
-}
+} // namespace Inception
 #endif

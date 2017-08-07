@@ -141,6 +141,11 @@ namespace klee {
     HANDLER(handleDumpStack);
     HANDLER(handleEnableIRQ);
     HANDLER(handleDisableIRQ);
+    HANDLER(handleEnableTraceInstructions);
+    HANDLER(handleDisableTraceInstructions);
+    HANDLER(handleEnableMemTrace);
+    HANDLER(handleDisableMemTrace);
+
 #undef HANDLER
   };
 } // End klee namespace

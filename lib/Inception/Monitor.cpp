@@ -11,11 +11,17 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 
+using namespace llvm;
+
 namespace Inception {
+
+bool Monitor::trace_on = false;
+
+bool Monitor::trace_io_on = false;
 
 bool Monitor::running = false;
 
-klee::Executor* Monitor::executor = NULL;
+klee::Executor *Monitor::executor = NULL;
 
 std::map<std::string, uint64_t> Monitor::followed = {
     {std::pair<std::string, uint64_t>("R0", 0)},
@@ -45,22 +51,22 @@ Monitor::Monitor() {}
 
 Monitor::~Monitor() {}
 
-void Monitor::follow(const llvm::GlobalVariable* i, uint64_t address) {
+void Monitor::follow(const llvm::GlobalVariable *i, uint64_t address) {
 
-  try{
+  try {
 
     // llvm::errs() << "Should I follow : " << i->getName() << "\n";
 
-    std::map<std::string, uint64_t>::iterator it = Monitor::followed.find(i->getName());
+    std::map<std::string, uint64_t>::iterator it =
+        Monitor::followed.find(i->getName());
     if (it != Monitor::followed.end())
-        it->second = address;
+      it->second = address;
     else
       return;
 
     // klee_warning("Monitor is watching one register more...");
 
-  }
-  catch (const std::out_of_range& oor) {
+  } catch (const std::out_of_range &oor) {
   }
 }
 
@@ -77,13 +83,17 @@ void Monitor::dump() {
 
     if (b->second == 0) {
       // llvm::errs() << "[Monitor]\n\t Register " << b->first << " is not
+<<<<<<< HEAD
       // followed \n ";
+=======
+      // followed \n";
+>>>>>>> 7713b26725108ec8eb379866f23dc58f44393957
       continue;
     }
 
     ExecutionState *state = executor->getExecutionState();
 
-    ref<Expr> address_ce = ConstantExpr::create(b->second, Expr::Int32);
+    ref<Expr> address_ce = klee::ConstantExpr::create(b->second, Expr::Int32);
 
     std::string info = executor->getAddressInfo(*state, address_ce);
 
@@ -95,6 +105,7 @@ void Monitor::dump() {
   }
 }
 
+<<<<<<< HEAD
 void Monitor::dump_stack(int begin, int end) {
 
   if(!Monitor::executor) {
@@ -123,6 +134,9 @@ void Monitor::dump_stack(int begin, int end) {
 }
 
 void Monitor::init(Executor* _executor) {
+=======
+void Monitor::init(Executor *_executor) {
+>>>>>>> 7713b26725108ec8eb379866f23dc58f44393957
 
   executor = _executor;
 
@@ -163,4 +177,73 @@ void Monitor::init(Executor* _executor) {
 //
 // }
 
+void Monitor::trace(ExecutionState &state, KInstruction *ki) {
+  Instruction *i = ki->inst;
+
+  if (!Monitor::trace_on)
+    return;
+
+  StringRef FctName = i->getParent()->getParent()->getName();
+
+  std::string srcFile = ki->info->file;
+  if (srcFile.length() > 42)
+    srcFile = srcFile.substr(42);
+
+  std::string debug = std::to_string(ki->info->line) + " of " + srcFile + "\n";
+
+  llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
+               << FctName << "\n";
+
+  llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile
+               << "\n";
+
+  std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
+  std::vector<StackFrame>::iterator stackEnd = state.stack.end();
+
+  int stack_idx = 0;
+
+  errs() << "asm line " << ki->info->assemblyLine << "\n";
+  while (stackSeek != stackEnd) {
+    errs() << "stack idx " << stack_idx << " in ";
+    errs() << stackSeek->kf->function->getName();
+    if (stackSeek->caller) {
+      errs() << " line " << stackSeek->caller->info->assemblyLine;
+      errs() << "\n";
+    } else {
+      errs() << " no caller\n";
+    }
+    ++stackSeek;
+    ++stack_idx;
+  }
+  std::cerr << std::endl;
 }
+
+void Monitor::traceIO(ref<Expr> address, ref<Expr> value, bool isWrite,
+                      KInstruction *target) {
+
+  if (!Monitor::trace_io_on)
+    return;
+
+  klee::ConstantExpr *address_ce = dyn_cast<klee::ConstantExpr>(address);
+  uint64_t concrete_address = address_ce->getZExtValue();
+
+  klee::ConstantExpr *value_ce = dyn_cast<klee::ConstantExpr>(value);
+  uint64_t concrete_value = value_ce->getZExtValue();
+
+  std::string srcFile = target->info->file;
+  if (srcFile.length() > 42)
+    srcFile = srcFile.substr(42);
+
+  std::string debug =
+      std::to_string(target->info->line) + " of " + srcFile + "\n ";
+
+  if (isWrite) {
+    printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n ", concrete_address,
+           concrete_value, debug.c_str());
+  } else {
+    printf("[RealRead] *0x%08x->0x%08x, %s\n\n ", concrete_address,
+           concrete_value, debug.c_str());
+  }
+}
+
+} // namespace Inception

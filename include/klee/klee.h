@@ -18,6 +18,26 @@ extern "C" {
 #endif
 
   /*
+   * Enable traces
+   */
+  void inception_enable_mem_trace();
+
+  /*
+   * Disable traces
+   */
+  void inception_disable_mem_trace();
+
+  /*
+   * Enable traces
+   */
+  void inception_enable_trace();
+
+  /*
+   * Disable traces
+   */
+  void inception_disable_trace();
+
+  /*
    * Dump Virtual CPU registers
    */
   void inception_dump_registers();

@@ -1573,36 +1573,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
 
-  // std::string srcFile = ki->info->file;
-  // if (srcFile.length() > 42)
-  //   srcFile = srcFile.substr(42);
-  //
-  // std::string debug = std::to_string(ki->info->line)+" of "+srcFile+"\n";
-  //
-  // llvm::errs() << "[Inception]\tinstruction: " << *i << " <-> function "
-  // << i->getParent()->getParent()->getName() << "\n";
-  //
-  // llvm::errs() << "\t(src line: " << ki->info->line << " of " << srcFile << "\n";
-
-  // std::vector<StackFrame>::iterator stackSeek = state.stack.begin();
-  // std::vector<StackFrame>::iterator stackEnd = state.stack.end();
-  //
-  // int stack_idx = 0;
-  //
-  // errs() << "asm line " << ki->info->assemblyLine << "\n";
-  // while (stackSeek != stackEnd) {
-  //   errs() << "stack idx " << stack_idx << " in ";
-  //   errs() << stackSeek->kf->function->getName();
-  //   if (stackSeek->caller) {
-  //     errs() << " line " << stackSeek->caller->info->assemblyLine;
-  //     errs() << "\n";
-  //   } else {
-  //     errs() << " no caller\n";
-  //   }
-  //   ++stackSeek;
-  //   ++stack_idx;
-  // }
-  // std::cerr << std::endl;
+  Inception::Monitor::trace(state, ki);
 
   switch (i->getOpcode()) {
     // Control flow
@@ -3459,7 +3430,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
    if (Inception::RealMemory::is_real(concrete_address) == true) {
 
-     // llvm::errs() << *target->inst << " :  \t";
+     Inception::Monitor::traceIO(address, value, isWrite, target);
 
      if (isWrite) {
 
@@ -3470,11 +3441,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
        uint64_t concrete_value = value_ce->getZExtValue();
 
        Inception::RealTarget::write(concrete_address, concrete_value, type);
-      //  std::string srcFile = target->info->file;
-      //  if (srcFile.length() > 42)
-        //  srcFile = srcFile.substr(42);
-      //  std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-      //  printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
        return;
      } else {
 
@@ -3490,11 +3456,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                                       &concrete_value, type);
        bindLocal(target, state, result);
 
-      //  std::string srcFile = target->info->file;
-      //  if (srcFile.length() > 42)
-        //  srcFile = srcFile.substr(42);
-      //  std::string debug = std::to_string(target->info->line)+" of "+srcFile+"\n";
-      //  printf("[RealRead] *0x%08x -> 0x%08x, %s\n\n",concrete_address, concrete_value, debug.c_str());
        return;
      }
    }

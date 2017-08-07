@@ -6,128 +6,136 @@
 #include "stdlib.h"
 
 // #include "llvm/Function.h"
-#include "llvm/IR/Function.h"
-#include "llvm/ADT/StringRef.h"
+#include "klee/Internal/ADT/RNG.h"
 #include "klee/Internal/Module/KModule.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Function.h"
 
-#include <iostream>
-#include "map"
 #include "list"
+#include "map"
+#include <iostream>
 #include <queue>
 
 using namespace llvm;
 
-namespace klee{
-  class KInstIterator;
-  class ExecutionState;
-  class Executor;
-}
+namespace klee {
+class KInstIterator;
+class ExecutionState;
+class Executor;
+} // namespace klee
 
-namespace Inception{
+namespace Inception {
 
-  #ifndef PARSER_CALLBACK
-  #define PARSER_CALLBACK
+#ifndef PARSER_CALLBACK
+#define PARSER_CALLBACK
 
-  typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
+typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
 
-  typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
+typedef void (*ParserIrqIDBaseAddrCB)(uint32_t);
 
-  typedef void (*ParserIrqIDBaseAddrCB)(uint32_t);
+typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
 
 #endif
 
-  class Interrupt{
+class Interrupt {
 
-    public :
-      Interrupt(std::string _handlerName, uint32_t _id, uint32_t _group_priority, uint32_t _internal_priority) :
-        handlerName(_handlerName), id(_id), group_priority(_group_priority), internal_priority(_internal_priority), state(0) {}
+public:
+  Interrupt(std::string _handlerName, uint32_t _id, uint32_t _group_priority,
+            uint32_t _internal_priority)
+      : handlerName(_handlerName), id(_id), group_priority(_group_priority),
+        internal_priority(_internal_priority), state(0) {}
 
-      Interrupt();
+  Interrupt();
 
-      ~Interrupt();
+  ~Interrupt();
 
-      std::string handlerName;
+  std::string handlerName;
 
-      uint32_t id;
+  uint32_t id;
 
-      uint32_t group_priority;
+  uint32_t group_priority;
 
-      uint32_t internal_priority;
+  uint32_t internal_priority;
 
-      klee::ExecutionState* state;
-  };
+  klee::ExecutionState *state;
+};
 
-  class InterruptComparator{
-  public:
-    bool operator() (Interrupt* a, Interrupt* b) {
-      if(a->group_priority > b->group_priority)
+class InterruptComparator {
+public:
+  bool operator()(Interrupt *a, Interrupt *b) {
+    if (a->group_priority > b->group_priority)
+      return false;
+
+    if (a->group_priority == b->group_priority)
+      if (a->internal_priority >= b->internal_priority)
         return false;
 
-      if(a->group_priority == b->group_priority)
-        if(a->internal_priority >= b->internal_priority)
-          return false;
+    return true;
+  }
+};
 
-      return true;
-    }
+class RealInterrupt {
+public:
+  RealInterrupt();
 
-  };
+  ~RealInterrupt();
 
-  class RealInterrupt{
-  public:
+  static bool interrupted;
 
-    RealInterrupt();
+  static void init(klee::Executor *_executor);
 
-    ~RealInterrupt();
+  static bool is_up(void);
 
-    static bool interrupted;
+  static void AddInterrupt(std::string handler_name, uint32_t id,
+                           uint32_t group_priority, uint32_t internal_priority);
 
-    static void init(klee::Executor* _executor);
+  static void raise(int id);
 
-    static bool is_up(void);
+  static bool is_interrupted();
 
-    static void AddInterrupt(std::string handler_name, uint32_t id, uint32_t group_priority, uint32_t internal_priority);
+  static void stop_interrupt();
 
-    static void raise(int id);
+  static klee::ExecutionState *next_without_priority();
 
-    static bool is_interrupted();
+  static klee::ExecutionState *next();
 
-    static void stop_interrupt();
+  static bool masked();
 
-    static klee::ExecutionState* next_without_priority();
+  static klee::ExecutionState *create_interrupt_state();
 
-    static klee::ExecutionState* next();
+  static klee::ExecutionState *interrupt_state;
 
-    static bool masked();
+  static llvm::Function *caller;
 
-    static klee::ExecutionState* create_interrupt_state();
+  static bool ending;
 
-    static klee::ExecutionState* interrupt_state;
+  static Interrupt *current_interrupt;
 
-    static llvm::Function* caller;
+  static klee::Executor *executor;
 
-    static bool ending;
+  static klee::ExecutionState *getPending();
 
-    static Interrupt* current_interrupt;
+  static bool enabled;
 
-    static klee::Executor* executor;
+  static void disable();
 
-    static klee::ExecutionState* getPending();
+  static void enable();
 
-    static bool enabled;
+  static klee::RNG *random;
 
-    static void disable();
+  static void set_irq_id_base_addr(uint32_t address);
 
-    static void enable();
+private:
 
-    static void set_irq_id_base_addr(uint32_t address);
+  static uint32_t irq_id_base_addr;
 
-  private:
-    static uint32_t irq_id_base_addr;
+  static uint32_t stub_ack_address;
 
-    static std::map<uint32_t, Interrupt*> interrupts_vector;
+  static std::map<uint32_t, Interrupt *> interrupts_vector;
 
-    static std::priority_queue<Interrupt*, std::vector<Interrupt*>, InterruptComparator> pending_interrupts;
-
-  };
+  static std::priority_queue<Interrupt *, std::vector<Interrupt *>,
+                             InterruptComparator>
+      pending_interrupts;
+};
 }
 #endif

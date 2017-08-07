@@ -143,11 +143,16 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
     add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
+    add("inception_enable_trace", handleEnableTraceInstructions, true),
+    add("inception_disable_trace", handleDisableTraceInstructions, true),
+
+    add("inception_enable_mem_trace", handleEnableMemTrace, true),
+    add("inception_disable_mem_trace", handleDisableMemTrace, true),
+
     add("inception_dump_registers", handleDumpRegisters, true),
     add("inception_dump_stack", handleDumpStack, true),
     add("disable_irq", handleDisableIRQ, true),
     add("enable_irq", handleEnableIRQ, true),
-
 #undef addDNR
 #undef add
 };
@@ -814,4 +819,28 @@ void SpecialFunctionHandler::handleDisableIRQ(ExecutionState &state,
                               KInstruction *target,
                               std::vector<ref<Expr> > &arguments) {
   Inception::RealInterrupt::disable();
+}
+
+void SpecialFunctionHandler::handleEnableTraceInstructions(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+  Inception::Monitor::enableInstructionTrace();
+}
+
+void SpecialFunctionHandler::handleDisableTraceInstructions(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+  Inception::Monitor::disableInstructionTrace();
+}
+
+void SpecialFunctionHandler::handleEnableMemTrace(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+  Inception::Monitor::enableMemTrace();
+}
+
+void SpecialFunctionHandler::handleDisableMemTrace(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+  Inception::Monitor::disableMemTrace();
 }
