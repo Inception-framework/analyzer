@@ -2907,8 +2907,8 @@ void Executor::run(ExecutionState &initialState) {
   doDumpStates();
 }
 
-std::string Executor::getAddressInfo(ExecutionState &state,
-                                     ref<Expr> address) const{
+std::string Executor::getAddressInfo(ExecutionState &state, ref<Expr> address,
+                                     int begin, int end) const {
   std::string Str;
   llvm::raw_string_ostream info(Str);
   info << "\taddress: " << address << "\n";
@@ -2932,10 +2932,13 @@ std::string Executor::getAddressInfo(ExecutionState &state,
       const ObjectState *os = state.addressSpace.findObject(mo);
       assert(os);
 
-      ref<Expr> result = os->read(offset, Expr::Int32);
+      for (auto i = begin; i < end; i++) {
+        ref<Expr> off =
+            AddExpr::create(offset, ConstantExpr::create(i * 4, Expr::Int32));
+        ref<Expr> result = os->read(off, Expr::Int32);
 
-      info << "\tvalue: " << result << "\n";
-
+        info << "\tvalue[" << i << "]: " << result << "\n";
+      }
     } else {
 
       ref<ConstantExpr> value;

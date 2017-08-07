@@ -23,6 +23,11 @@ extern "C" {
   void inception_dump_registers();
 
   /*
+   * Dump the STACK
+   */
+  void inception_dump_stack(int begin, int end);
+
+  /*
    * Disable IRQ : call RealInterrupt disable()
    */
   void disable_irq();

@@ -101,7 +101,8 @@ public:
   };
 
   /// Get textual information regarding a memory address.
-  std::string getAddressInfo(ExecutionState &state, ref<Expr> address) const;
+  std::string getAddressInfo(ExecutionState &state, ref<Expr> address,
+                             int begin = 0, int end = 1) const;
 
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
 

@@ -18,26 +18,27 @@ bool Monitor::running = false;
 klee::Executor* Monitor::executor = NULL;
 
 std::map<std::string, uint64_t> Monitor::followed = {
-  {std::pair<std::string, uint64_t>("R0",0)},
-  {std::pair<std::string, uint64_t>("R1",0)},
-  {std::pair<std::string, uint64_t>("R2",0)},
-  {std::pair<std::string, uint64_t>("R3",0)},
-  {std::pair<std::string, uint64_t>("R4",0)},
-  {std::pair<std::string, uint64_t>("R5",0)},
-  {std::pair<std::string, uint64_t>("R6",0)},
-  {std::pair<std::string, uint64_t>("R7",0)},
-  {std::pair<std::string, uint64_t>("R8",0)},
-  {std::pair<std::string, uint64_t>("R9",0)},
-  {std::pair<std::string, uint64_t>("R10",0)},
-  {std::pair<std::string, uint64_t>("R11",0)},
-  {std::pair<std::string, uint64_t>("R12",0)},
-  {std::pair<std::string, uint64_t>("LR",0)},
-  {std::pair<std::string, uint64_t>("SP",0)},
-  {std::pair<std::string, uint64_t>("PC",0)},
-  {std::pair<std::string, uint64_t>("NF",0)},
-  {std::pair<std::string, uint64_t>("ZF",0)},
-  {std::pair<std::string, uint64_t>("CF",0)},
-  {std::pair<std::string, uint64_t>("VF",0)},
+    {std::pair<std::string, uint64_t>("R0", 0)},
+    {std::pair<std::string, uint64_t>("R1", 0)},
+    {std::pair<std::string, uint64_t>("R2", 0)},
+    {std::pair<std::string, uint64_t>("R3", 0)},
+    {std::pair<std::string, uint64_t>("R4", 0)},
+    {std::pair<std::string, uint64_t>("R5", 0)},
+    {std::pair<std::string, uint64_t>("R6", 0)},
+    {std::pair<std::string, uint64_t>("R7", 0)},
+    {std::pair<std::string, uint64_t>("R8", 0)},
+    {std::pair<std::string, uint64_t>("R9", 0)},
+    {std::pair<std::string, uint64_t>("R10", 0)},
+    {std::pair<std::string, uint64_t>("R11", 0)},
+    {std::pair<std::string, uint64_t>("R12", 0)},
+    {std::pair<std::string, uint64_t>("LR", 0)},
+    {std::pair<std::string, uint64_t>("SP", 0)},
+    {std::pair<std::string, uint64_t>("PC", 0)},
+    {std::pair<std::string, uint64_t>("NF", 0)},
+    {std::pair<std::string, uint64_t>("ZF", 0)},
+    {std::pair<std::string, uint64_t>("CF", 0)},
+    {std::pair<std::string, uint64_t>("VF", 0)},
+    {std::pair<std::string, uint64_t>("STACK", 0)},
 };
 
 Monitor::Monitor() {}
@@ -65,31 +66,60 @@ void Monitor::follow(const llvm::GlobalVariable* i, uint64_t address) {
 
 void Monitor::dump() {
 
-  if(!Monitor::executor) {
+  if (!Monitor::executor) {
     klee_warning("Monitor has not been initialized ...");
     return;
   }
 
   // uint64_t address = Monitor::followed.at(i->getName());
-  for(auto b=Monitor::followed.begin(), e=Monitor::followed.end(); e!=b; b++) {
+  for (auto b = Monitor::followed.begin(), e = Monitor::followed.end(); e != b;
+       b++) {
 
-    if(b->second == 0) {
-      // llvm::errs() << "[Monitor]\n\t Register " << b->first << " is not followed \n";
+    if (b->second == 0) {
+      // llvm::errs() << "[Monitor]\n\t Register " << b->first << " is not
+      // followed \n ";
       continue;
     }
 
-    ExecutionState* state = executor->getExecutionState();
+    ExecutionState *state = executor->getExecutionState();
 
     ref<Expr> address_ce = ConstantExpr::create(b->second, Expr::Int32);
 
     std::string info = executor->getAddressInfo(*state, address_ce);
 
     std::ofstream log_file;
-    log_file.open ("registers.dump", std::ios::out | std::ios::app);
+    log_file.open("registers.dump", std::ios::out | std::ios::app);
     log_file << b->first << "\n";
     log_file << info;
     log_file.close();
   }
+}
+
+void Monitor::dump_stack(int begin, int end) {
+
+  if(!Monitor::executor) {
+    klee_warning("Monitor has not been initialized ...");
+    return;
+  }
+
+  std::map<std::string, uint64_t>::iterator it =
+      Monitor::followed.find("STACK");
+
+  // for (int i = begin; i < end; i++) {
+
+  ExecutionState *state = executor->getExecutionState();
+
+  ref<Expr> address_ce = ConstantExpr::create(it->second, Expr::Int32);
+
+  std::string info = executor->getAddressInfo(*state, address_ce, begin, end);
+
+  std::ofstream log_file;
+  log_file.open("registers.dump", std::ios::out | std::ios::app);
+  // log_file << it->first << "[" << i << "]\n";
+  log_file << it->first << "\n";
+  log_file << info;
+  log_file.close();
+  //}
 }
 
 void Monitor::init(Executor* _executor) {

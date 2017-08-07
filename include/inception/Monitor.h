@@ -46,6 +46,8 @@ class Monitor {
 
   static void dump();
 
+  static void dump_stack(int begin, int end);
+
   static void init(Executor* _executor);
 
 };
