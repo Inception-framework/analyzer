@@ -83,11 +83,7 @@ void Monitor::dump() {
 
     if (b->second == 0) {
       // llvm::errs() << "[Monitor]\n\t Register " << b->first << " is not
-<<<<<<< HEAD
-      // followed \n ";
-=======
       // followed \n";
->>>>>>> 7713b26725108ec8eb379866f23dc58f44393957
       continue;
     }
 
@@ -105,7 +101,6 @@ void Monitor::dump() {
   }
 }
 
-<<<<<<< HEAD
 void Monitor::dump_stack(int begin, int end) {
 
   if(!Monitor::executor) {
@@ -120,7 +115,7 @@ void Monitor::dump_stack(int begin, int end) {
 
   ExecutionState *state = executor->getExecutionState();
 
-  ref<Expr> address_ce = ConstantExpr::create(it->second, Expr::Int32);
+  ref<Expr> address_ce = klee::ConstantExpr::create(it->second, Expr::Int32);
 
   std::string info = executor->getAddressInfo(*state, address_ce, begin, end);
 
@@ -134,9 +129,6 @@ void Monitor::dump_stack(int begin, int end) {
 }
 
 void Monitor::init(Executor* _executor) {
-=======
-void Monitor::init(Executor *_executor) {
->>>>>>> 7713b26725108ec8eb379866f23dc58f44393957
 
   executor = _executor;
 
