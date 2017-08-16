@@ -608,31 +608,48 @@ void Executor::initializeGlobals(ExecutionState &state) {
          e = m->global_end();
        i != e; ++i) {
 
-    //XXX: Inception stack handling
-    if( i->getName().equals(StringRef("STACK")) ) {
+    ////XXX: Inception stack handling
+    // if( i->getName().equals(StringRef("STACK")) ) {
 
-       klee_warning("This code contains reversed assembly code.");
+    //   klee_warning("This code contains reversed assembly code.");
 
-       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
+    //   LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
 
-       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+    //   uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
-       MemoryObject *mo = memory->allocateStack((uint64_t)(unsigned long)0x20000000, size, false, true, &*i, 4);
+    //   MemoryObject *mo = memory->allocateStack((uint64_t)(unsigned
+    //   long)0x20000000, size, false, true, &*i, 4);
+    //   mo->isUserSpecified = true;
 
-       if (!mo)
-         llvm::report_fatal_error("out of memory");
+    //   if (!mo)
+    //     llvm::report_fatal_error("out of memory");
 
-       ObjectState *os = bindObjectInState(state, mo, false);
-       globalObjects.insert(std::make_pair(i, mo));
-       globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+    //   ObjectState *os = bindObjectInState(state, mo, false);
+    //   globalObjects.insert(std::make_pair(i, mo));
+    //   globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
 
-       if (!i->hasInitializer())
-         os->initializeToRandom();
-       continue;
+    //   if (!i->hasInitializer())
+    //     os->initializeToRandom();
+    //   continue;
+    //}
+
+    // load symbol table
+    std::map<std::string, uint64_t> ST;
+    std::ifstream infile("ST.txt");
+    std::string line;
+    while (std::getline(infile, line)) {
+      std::istringstream iss(line);
+      uint64_t Address;
+      std::string Name;
+      if (!(iss >> Address >> Name)) {
+        break;
+      } // error
+      ST.insert(std::make_pair(Name, Address));
     }
 
     const GlobalVariable *v = static_cast<const GlobalVariable *>(i);
     size_t globalObjectAlignment = getAllocationAlignment(v);
+
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
       // symbols. If we really cared about making external stuff work
@@ -690,9 +707,37 @@ void Executor::initializeGlobals(ExecutionState &state) {
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
-      MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGlobal=*/true, /*allocSite=*/v,
-                                          /*alignment=*/globalObjectAlignment);
+
+      uint64_t address = NULL;
+      // if (i->getName().equals(StringRef("STACK"))) {
+      //  address = 0x20001000;
+      //} /* else if (i->getName().equals(StringRef("global"))) {
+      //   address = 0x20000000;
+      // }*/
+
+      for (std::map<std::string, uint64_t>::iterator I = ST.begin(),
+                                                     E = ST.end();
+           I != E; ++I) {
+        if (i->getName().equals(StringRef(I->first))) {
+          address = I->second;
+        }
+        // printf("%s %08x\n", I->first, I->second);
+      }
+
+      MemoryObject *mo = NULL;
+      if (address != NULL) {
+        printf("global variable: name: %s, address: %08x, size: %d\n",
+               i->getName(), address, size);
+        mo = memory->allocateStack(address, size, /*isLocal=*/false,
+                                   /*isGlobal=*/true, /*allocSite=*/v,
+                                   /*alignment=*/globalObjectAlignment);
+      } else {
+        printf("global variable: name: %s\n", i->getName());
+        mo = memory->allocate(size, /*isLocal=*/false,
+                              /*isGlobal=*/true, /*allocSite=*/v,
+                              /*alignment=*/globalObjectAlignment);
+      }
+
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
@@ -700,7 +745,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
 
       if (!i->hasInitializer())
-          os->initializeToRandom();
+        os->initializeToRandom();
     }
   }
 

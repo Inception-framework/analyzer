@@ -300,8 +300,12 @@ void AddressSpace::copyOutConcretes() {
       ObjectState *os = it->second;
       uint8_t *address = (uint8_t*) (unsigned long) mo->address;
 
-      if (!os->readOnly)
+      if (!os->readOnly) {
+        // printf("copyOutConcretes: %08x %08x %d\n", address,
+        // os->concreteStore,
+        //       mo->size);
         memcpy(address, os->concreteStore, mo->size);
+      }
     }
   }
 }
