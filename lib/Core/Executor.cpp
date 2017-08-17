@@ -112,7 +112,8 @@
 using namespace llvm;
 using namespace klee;
 
-
+#include "inception/Configurator.h"
+#include "inception/SymbolsTable.h"
 #include "inception/RealContextSaver.h"
 #include "inception/RealInterrupt.h"
 #include "inception/RealTarget.h"
@@ -603,33 +604,13 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // allocate and initialize globals, done in two passes since we may
   // need address of a global in order to initialize some other one.
 
+  Inception::SymbolsTable* ST = new Inception::SymbolsTable();
+  uint64_t address = 0;
+
   // allocate memory objects for all globals
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
-
-    //XXX: Inception stack handling
-    if( i->getName().equals(StringRef("STACK")) ) {
-
-       klee_warning("This code contains reversed assembly code.");
-
-       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-
-       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
-
-       MemoryObject *mo = memory->allocateStack((uint64_t)(unsigned long)0x20000000, size, false, true, &*i, 4);
-
-       if (!mo)
-         llvm::report_fatal_error("out of memory");
-
-       ObjectState *os = bindObjectInState(state, mo, false);
-       globalObjects.insert(std::make_pair(i, mo));
-       globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
-
-       if (!i->hasInitializer())
-         os->initializeToRandom();
-       continue;
-    }
 
     const GlobalVariable *v = static_cast<const GlobalVariable *>(i);
     size_t globalObjectAlignment = getAllocationAlignment(v);
@@ -690,9 +671,31 @@ void Executor::initializeGlobals(ExecutionState &state) {
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
-      MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGlobal=*/true, /*allocSite=*/v,
-                                          /*alignment=*/globalObjectAlignment);
+
+      address = ST->lookUp(i->getName());
+
+      MemoryObject *mo;
+      if(address == 0) {
+        mo = memory->allocate(size, /*isLocal=*/false,
+          /*isGlobal=*/true, /*allocSite=*/v,
+          /*alignment=*/globalObjectAlignment);
+      }
+      else {
+        printf("[Executor]\n\tAllocating object %s at 0x%08x of size " \
+          "0x%08x\n", i->getName().str().c_str(), address, size);
+        mo = memory->allocateCustom(address, size, false, true, v,
+          globalObjectAlignment);
+
+          std::string Str;
+          llvm::raw_string_ostream info(Str);
+          std::string alloc_info;
+          mo->getAllocInfo(alloc_info);
+          info << "object at " << mo->address
+               << " of size " << mo->size << "\n"
+               << "\t\t" << alloc_info << "\n";
+
+          llvm::errs() << info.str() << "\n";
+      }
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);

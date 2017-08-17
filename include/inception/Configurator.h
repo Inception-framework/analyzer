@@ -11,8 +11,6 @@ typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
 
 typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
 
-typedef void (*ParserIrqIDBaseAddrCB)(uint32_t);
-
 #endif
 
 class Configurator {

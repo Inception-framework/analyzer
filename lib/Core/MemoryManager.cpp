@@ -167,7 +167,7 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
   return res;
 }
 
-MemoryObject *MemoryManager::allocateStack(uint64_t address, uint64_t size, bool isLocal,
+MemoryObject *MemoryManager::allocateCustom(uint64_t address, uint64_t size, bool isLocal,
                                       bool isGlobal,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
@@ -188,7 +188,8 @@ MemoryObject *MemoryManager::allocateStack(uint64_t address, uint64_t size, bool
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
                                        allocSite, this);
 
-   res->isFixed = true;
+  res->isFixed = true;
+  res->isUserSpecified = true;
 
   objects.insert(res);
   return res;
