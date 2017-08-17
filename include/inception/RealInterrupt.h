@@ -31,8 +31,6 @@ namespace Inception {
 
 typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
 
-typedef void (*ParserIrqIDBaseAddrCB)(uint32_t);
-
 typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
 
 #endif
@@ -122,8 +120,6 @@ public:
   static void enable();
 
   static klee::RNG *random;
-
-  static void set_irq_id_base_addr(uint32_t address);
 
 private:
 
