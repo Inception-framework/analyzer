@@ -120,7 +120,7 @@ void Monitor::dump_stack(int begin, int end) {
   std::string info = executor->getAddressInfo(*state, address_ce, begin, end);
 
   std::ofstream log_file;
-  log_file.open("registers.dump", std::ios::out | std::ios::app);
+  log_file.open("stack.dump", std::ios::out | std::ios::app);
   // log_file << it->first << "[" << i << "]\n";
   log_file << it->first << "\n";
   log_file << info;
