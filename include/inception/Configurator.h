@@ -25,7 +25,7 @@ public:
 
   static std::string file_name;
 
-  static Json::Value* root;
+  static Json::Value *root;
 
   static bool next_interrupt(ParserInterruptCB callback);
 
@@ -33,14 +33,16 @@ public:
 
   static bool next_memory(ParserMemoryCB callback);
 
-  static bool get_irq_id_base_addr(ParserIrqIDBaseAddrCB callback);
-
   static unsigned int memory_index;
 
   static bool file_present;
 
-};
+  static std::string getAsString(std::string section, std::string category,
+                                 uint32_t line);
 
+  static uint32_t getAsInteger(std::string section, std::string category,
+                               uint32_t line);
+};
 }
 
 #endif

@@ -55,8 +55,7 @@ void RealInterrupt::init(klee::Executor *_executor) {
   while (Configurator::next_interrupt(callback) == true)
     ;
 
-  ParserIrqIDBaseAddrCB callback_irq = &RealInterrupt::set_irq_id_base_addr;
-  Configurator::get_irq_id_base_addr(callback_irq);
+  irq_id_base_addr = Configurator::getAsInteger("Stub", "address", 0);
 
   // configure trace
   if (RealTarget::inception_device == NULL)
@@ -65,12 +64,6 @@ void RealInterrupt::init(klee::Executor *_executor) {
   Watcher watcher = &RealInterrupt::raise;
   // Watcher watcher = &watch_and_avoid;
   trace_init(Inception::RealTarget::inception_device, watcher);
-}
-
-void RealInterrupt::set_irq_id_base_addr(uint32_t address) {
-  printf("set_irq_base_addr(0x%08x)\n", address);
-
-  irq_id_base_addr = address;
 }
 
 void RealInterrupt::AddInterrupt(std::string handler_name, uint32_t id,

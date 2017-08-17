@@ -1,7 +1,7 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include "string"
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 #include <json/json.h>
 
@@ -15,7 +15,7 @@ namespace Inception {
 
 std::string Configurator::file_name = "config.json";
 
-Json::Value* Configurator::root = NULL;
+Json::Value *Configurator::root = NULL;
 
 unsigned int Configurator::interrupt_index = 0;
 
@@ -29,10 +29,10 @@ Configurator::~Configurator() {}
 
 void Configurator::init() {
 
-  if(Configurator::root == NULL) {
+  if (Configurator::root == NULL) {
 
     std::ifstream config_file(file_name, std::ifstream::binary);
-    if(config_file) {
+    if (config_file) {
 
       Json::Value data;
 
@@ -46,40 +46,78 @@ void Configurator::init() {
   }
 }
 
+std::string Configurator::getAsString(std::string section, std::string category,
+                                      uint32_t line) {
+
+  Configurator::init();
+
+  if (Configurator::file_present == false)
+    return NULL;
+
+  const Json::Value Section= (*Configurator::root)[section];
+
+  return Section[line].get(category, "").asString();
+}
+
+uint32_t Configurator::getAsInteger(std::string section, std::string category,
+                                    uint32_t line) {
+
+  Configurator::init();
+
+  if (Configurator::file_present == false)
+    return 0;
+
+  const Json::Value Section = (*Configurator::root)["Stub"];
+
+  uint32_t address;
+
+  std::stringstream ss;
+
+  std::string s_address = Section[line].get("address", "0").asString();
+  ss << std::hex << s_address;
+  ss >> address;
+  ss.clear();
+
+  return address;
+}
+
 bool Configurator::next_memory(ParserMemoryCB callback) {
 
   Configurator::init();
 
-  if(Configurator::file_present == false)
+  if (Configurator::file_present == false)
     return false;
 
-	const Json::Value realMemory = (*Configurator::root)["RealMemory"];
+  const Json::Value realMemory = (*Configurator::root)["RealMemory"];
 
-	uint32_t address, size;
+  uint32_t address, size;
 
-	std::stringstream ss;
+  std::stringstream ss;
 
-	// Iterate over the sequence elements.
-	if( Configurator::memory_index < realMemory.size() ) {
+  // Iterate over the sequence elements.
+  if (Configurator::memory_index < realMemory.size()) {
 
-    std::string name = realMemory[Configurator::memory_index].get("name", "0").asString();
+    std::string name =
+        realMemory[Configurator::memory_index].get("name", "0").asString();
 
-		std::string s_address = realMemory[Configurator::memory_index].get("address", "0").asString();
-		ss << std::hex << s_address;
-		ss >> address;
-		ss.clear();
+    std::string s_address =
+        realMemory[Configurator::memory_index].get("address", "0").asString();
+    ss << std::hex << s_address;
+    ss >> address;
+    ss.clear();
 
-		std::string s_size = realMemory[Configurator::memory_index].get("size", "0").asString();
-		ss << std::hex << s_size;
-		ss >> size;
-		ss.clear();
+    std::string s_size =
+        realMemory[Configurator::memory_index].get("size", "0").asString();
+    ss << std::hex << s_size;
+    ss >> size;
+    ss.clear();
 
-		callback(name, address, size);
+    callback(name, address, size);
 
     Configurator::memory_index++;
 
     return true;
-	} else
+  } else
     Configurator::file_present == false;
 
   return false;
@@ -89,68 +127,55 @@ bool Configurator::next_interrupt(ParserInterruptCB callback) {
 
   Configurator::init();
 
-  if(Configurator::file_present == false)
+  if (Configurator::file_present == false)
     return false;
 
-	const Json::Value realInterrupt = (*Configurator::root)["RealInterrupt"];
+  const Json::Value realInterrupt = (*Configurator::root)["RealInterrupt"];
 
-	uint32_t priority_g, priority, id;
+  uint32_t priority_g, priority, id;
 
-	std::stringstream ss;
+  std::stringstream ss;
 
-	// Iterate over the sequence elements.
-	if( Configurator::interrupt_index < realInterrupt.size() ) {
+  // Iterate over the sequence elements.
+  if (Configurator::interrupt_index < realInterrupt.size()) {
 
-		std::string name = realInterrupt[Configurator::interrupt_index].get("name", "0").asString();
+    std::string name = realInterrupt[Configurator::interrupt_index]
+                           .get("name", "0")
+                           .asString();
 
-		std::string s_priority_g = realInterrupt[Configurator::interrupt_index].get("priority_g", "0").asString();
-		ss << s_priority_g;
-		ss >> priority_g;
-		ss.clear();
+    std::string s_priority_g = realInterrupt[Configurator::interrupt_index]
+                                   .get("priority_g", "0")
+                                   .asString();
+    ss << s_priority_g;
+    ss >> priority_g;
+    ss.clear();
 
-		std::string s_priority = realInterrupt[Configurator::interrupt_index].get("priority", "0").asString();
-		ss << s_priority;
-		ss >> priority;
-		ss.clear();
+    std::string s_priority = realInterrupt[Configurator::interrupt_index]
+                                 .get("priority", "0")
+                                 .asString();
+    ss << s_priority;
+    ss >> priority;
+    ss.clear();
 
-		std::string s_id = realInterrupt[Configurator::interrupt_index].get("id", "0").asString();
-		ss << s_id;
+    std::string s_id =
+        realInterrupt[Configurator::interrupt_index].get("id", "0").asString();
+    ss << s_id;
     ss >> id;
-		ss.clear();
+    ss.clear();
 
-		std::string handler = realInterrupt[Configurator::interrupt_index].get("handler", "0").asString();
+    std::string handler = realInterrupt[Configurator::interrupt_index]
+                              .get("handler", "0")
+                              .asString();
 
-		callback(handler, id, priority_g, priority);
+    callback(handler, id, priority_g, priority);
 
     Configurator::interrupt_index++;
 
     return true;
-	} else
+  } else
     Configurator::file_present == false;
 
   return false;
 }
 
-bool Configurator::get_irq_id_base_addr(ParserIrqIDBaseAddrCB callback) {
-
-  Configurator::init();
-
-  if (Configurator::file_present == false)
-    return false;
-
-  const Json::Value IrqIDBaseAddr = (*Configurator::root)["IrqIDBaseAddr"];
-
-  uint32_t address;
-
-  std::stringstream ss;
-
-  std::string s_address = IrqIDBaseAddr[0].get("address", "0").asString();
-  ss << std::hex << s_address;
-  ss >> address;
-  ss.clear();
-
-  callback(address);
-
-  return true;
-}
-}
+} // namespace Inception
