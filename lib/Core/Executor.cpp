@@ -674,6 +674,13 @@ void Executor::initializeGlobals(ExecutionState &state) {
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
       address = ST->lookUp(i->getName());
+      if (i->getName().equals(StringRef("STACK"))) {
+        // address -= size;
+        // address += 4;
+        // debug
+        address -= (size / 4);
+        address += 4;
+      }
 
       MemoryObject *mo;
       if(address == 0) {
