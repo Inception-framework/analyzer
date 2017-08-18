@@ -20,7 +20,7 @@ SymbolsTable::SymbolsTable() {
 SymbolsTable::~SymbolsTable() {}
 
 void SymbolsTable::initTable() {
-  uint64_t SymAddr;
+  uint64_t SymAddr, SymSize;
   StringRef SymName;
   std::error_code ec;
 
@@ -38,23 +38,64 @@ void SymbolsTable::initTable() {
       continue;
     }
 
-    // printf("\tSymbol %s at 0x%08x\n", SymName.str().c_str(), SymAddr);
-    symbols.insert(std::pair<StringRef, uint64_t>(SymName, SymAddr));
+    if ((ec = I->getSize(SymSize))) {
+      errs() << ec.message() << "\n";
+      continue;
+    }
+
+    printf("\tSymbol %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
+           SymAddr, SymSize);
+    symbols.insert(std::pair<StringRef, std::pair<uint64_t, uint64_t> >(
+        SymName, std::pair<uint64_t, uint64_t>(SymAddr, SymSize)));
   }
+
+  for (object::section_iterator I = Executable->sections().begin(),
+                               E = Executable->sections().end();
+       I != E; ++I) {
+
+    if ((ec = I->getName(SymName))) {
+      errs() << ec.message() << "\n";
+      continue;
+    }
+
+    SymAddr = I->getAddress();
+
+    SymSize = I->getSize();
+
+    printf("\tSections %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
+           SymAddr, SymSize);
+    sections.insert(std::pair<StringRef, std::pair<uint64_t, uint64_t> >(
+        SymName, std::pair<uint64_t, uint64_t>(SymAddr, SymSize)));
+  }
+
 }
 
-uint64_t SymbolsTable::lookUp(StringRef name) {
+std::pair<uint64_t, uint64_t> SymbolsTable::lookUpVariable(StringRef name) {
 
-  std::map<StringRef, uint64_t>::iterator it;
+  std::map<StringRef, std::pair<uint64_t, uint64_t>>::iterator it;
 
   it = symbols.find(name);
   if (it != symbols.end()) {
     printf("[SymbolsTable]\n");
-    printf("\t%s Located at 0x%08x\n",name.str().c_str(), it->second);
+    printf("\t%s Located at 0x%08x\n", name.str().c_str(), it->second);
     return it->second;
   }
 
-  return 0;
+  return std::pair<uint64_t, uint64_t>(0, 0);
+}
+
+std::pair<uint64_t, uint64_t> SymbolsTable::lookUpSection(StringRef name) {
+
+  std::map<StringRef, std::pair<uint64_t, uint64_t>>::iterator it;
+
+  it = sections.find(name);
+  if (it != sections.end()) {
+    printf("[SymbolsTable]\n");
+    printf("\t%s Located at 0x%08x\n", name.str().c_str(), it->second);
+    return it->second;
+  }
+
+  return std::pair<uint64_t, uint64_t>(0, 0);
 }
 
 void SymbolsTable::initConfig() {

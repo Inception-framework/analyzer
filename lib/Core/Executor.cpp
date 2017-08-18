@@ -120,6 +120,7 @@ using namespace klee;
 #include "inception/RealMemory.h"
 #include "inception/Monitor.h"
 
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 namespace {
   cl::opt<bool>
@@ -673,13 +674,30 @@ void Executor::initializeGlobals(ExecutionState &state) {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
-      address = ST->lookUp(i->getName());
+      address = ST->lookUpVariable(i->getName()).first;
       if (i->getName().equals(StringRef("STACK"))) {
-        // address -= size;
-        // address += 4;
-        // debug
-        address -= (size / 4);
-        address += 4;
+
+        size = ST->lookUpSection(".stack").second;
+
+        Value* Reg = m->getGlobalVariable("STACK");
+        if (Reg == NULL) {
+          Type* Ty = ArrayType::get(
+              IntegerType::get(m->getContext(), 4), size);
+
+          Constant* Initializer = Constant::getNullValue(Ty);
+
+          GlobalVariable* gvar_ptr_SP =
+              new GlobalVariable(*m,  // Module
+                                 Ty,                 // Type
+                                 false,              // isConstant
+                                 GlobalValue::CommonLinkage, Initializer, "STACK");
+          gvar_ptr_SP->setAlignment(4);
+
+          Instruction* to = dyn_cast<Instruction>(gvar_ptr_SP);
+          Instruction* from = dyn_cast<Instruction>((GlobalVariable*)v);
+
+          llvm::ReplaceInstWithInst (from, to);
+        }
       }
 
       MemoryObject *mo;

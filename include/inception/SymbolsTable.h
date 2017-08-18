@@ -22,14 +22,18 @@ SymbolsTable();
 
 void initTable();
 
-uint64_t lookUp(StringRef name);
+std::pair<uint64_t, uint64_t> lookUpVariable(StringRef name);
+
+std::pair<uint64_t, uint64_t> lookUpSection(StringRef name);
 
 private:
 void initConfig();
 
 void loadBinary();
 
-std::map<StringRef, uint64_t> symbols;
+std::map<StringRef, std::pair<uint64_t, uint64_t>> symbols;
+
+std::map<StringRef, std::pair<uint64_t, uint64_t>> sections;
 
 std::string FileName;
 
