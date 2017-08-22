@@ -714,6 +714,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
           mo = memory->allocateCustom(Info->base, size, Info->symbolic,
           Info->redirected, v, globalObjectAlignment);
 
+          if(mo->isSymbolic) {
+            printf("External memory tagged as symbolic !\n");
+            executeMakeSymbolic(state, mo, Info->name);
+          }
           // std::string Str;
           // llvm::raw_string_ostream info(Str);
           // std::string alloc_info;
@@ -3524,20 +3528,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (success) {
     const MemoryObject *mo = op.first;
 
-    if(mo->isExternalized) {
-      if(isWrite) {
-        ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
-        uint64_t concrete_value = value_ce->getZExtValue();
-
-        Inception::RealTarget::write(concrete_address, concrete_value, type);
-      } else {
-        uint64_t concrete_value = 0;
-
-        ref<Expr> result = Inception::RealTarget::read(concrete_address,
-                                            &concrete_value, type);
-        bindLocal(target, state, result);
-      }
-      return;
+    if(mo->isExternalized && isWrite && !mo->isSymbolic) {
+      ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
+      concrete_value = value_ce->getZExtValue();
     }
 
     if (MaxSymArraySize && mo->size>=MaxSymArraySize) {
@@ -3561,6 +3554,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (inBounds) {
       const ObjectState *os = op.second;
       if (isWrite) {
+
+        if(mo->isExternalized) {
+          if(mo->isSymbolic)
+            return;
+
+          Inception::RealTarget::write(concrete_address, concrete_value, type);
+          return;
+        }
+
         if (os->readOnly) {
           terminateStateOnError(state, "memory error: object read only",
                                 ReadOnly);
@@ -3569,6 +3571,27 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           wos->write(offset, value);
         }
       } else {
+
+        if(mo->isExternalized) {
+          uint64_t concrete_value = 0;
+
+          ref<Expr> result = os->read(offset, type);
+
+          if(mo->isSymbolic) {
+            // printf("Symbolic value at %lx ! \n", concrete_address);
+            static unsigned id;
+            const Array *array = arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
+                                           Expr::getMinBytesForWidth(result->getWidth()));
+            result = Expr::createTempRead(array, result->getWidth());
+          } else {
+            result = Inception::RealTarget::read(concrete_address,
+              &concrete_value, type);
+            // printf("Acces to value at %lx ! \n", concrete_address);
+          }
+          bindLocal(target, state, result);
+          return;
+        }
+
         ref<Expr> result = os->read(offset, type);
 
         if (interpreterOpts.MakeConcreteSymbolic)

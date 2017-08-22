@@ -113,12 +113,12 @@ bool Configurator::next_memory(SymbolsTable *sy) {
     ss >> size;
     ss.clear();
 
-    symbolic = false;
-        // realMemory[Configurator::memory_index].get("symbolic", false).asBool();
+    symbolic =
+        realMemory[Configurator::memory_index].get("symbolic", false).asBool();
 
-    char* dst = new char[name.length()+1];
+    char *dst = new char[name.length() + 1];
     name.copy(dst, name.length());
-    dst[name.length()]='\0';
+    dst[name.length()] = '\0';
 
     // (sy->*callback)(llvm::StringRef(name), address, size, symbolic);
     sy->addSymbol(llvm::StringRef(dst, name.length()), address, size, symbolic);
