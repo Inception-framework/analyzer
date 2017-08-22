@@ -55,13 +55,13 @@ public:
 
   static bool trace_io_on;
 
-  static bool enableInstructionTrace() { trace_on = true; }
+  static void enableInstructionTrace() { trace_on = true; }
 
-  static bool disableInstructionTrace() { trace_on = false; }
+  static void disableInstructionTrace() { trace_on = false; }
 
-  static bool enableMemTrace() { trace_io_on = true; }
+  static void enableMemTrace() { trace_io_on = true; }
 
-  static bool disableMemTrace() { trace_io_on = false; }
+  static void disableMemTrace() { trace_io_on = false; }
 
   static void traceIO(ref<Expr> address, ref<Expr> value, bool isWrite,
                       KInstruction *target);

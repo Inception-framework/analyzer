@@ -230,10 +230,10 @@ void Monitor::traceIO(ref<Expr> address, ref<Expr> value, bool isWrite,
       std::to_string(target->info->line) + " of " + srcFile + "\n ";
 
   if (isWrite) {
-    printf("[RealWrite] *0x%08x = 0x%08x, %s\n\n ", concrete_address,
+    printf("[RealWrite] *0x%lx = 0x%lx, %s\n\n ", concrete_address,
            concrete_value, debug.c_str());
   } else {
-    printf("[RealRead] *0x%08x->0x%08x, %s\n\n ", concrete_address,
+    printf("[RealRead] *0x%lx->0x%lx, %s\n\n ", concrete_address,
            concrete_value, debug.c_str());
   }
 }

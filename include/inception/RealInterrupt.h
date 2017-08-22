@@ -26,15 +26,6 @@ class Executor;
 
 namespace Inception {
 
-#ifndef PARSER_CALLBACK
-#define PARSER_CALLBACK
-
-typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
-
-typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
-
-#endif
-
 class Interrupt {
 
 public:
@@ -122,7 +113,6 @@ public:
   static klee::RNG *random;
 
 private:
-
   static uint32_t irq_id_base_addr;
 
   static uint32_t stub_ack_address;

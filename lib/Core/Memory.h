@@ -47,8 +47,6 @@ public:
 
   uint64_t address;
 
-  uint64_t device_address;
-
   unsigned size;
 
   mutable std::string name;
@@ -60,6 +58,10 @@ public:
   bool isFixed;
 
   bool isUserSpecified;
+
+  bool isExternalized;
+
+  bool isSymbolic;
 
   MemoryManager *parent;
 
@@ -79,8 +81,6 @@ public:
 
   MemoryObject &operator=(const MemoryObject &b);
 
-  void setDeviceAddress(uint64_t new_address) { device_address = new_address;};
-
 public:
 
   // XXX this is just a temp hack, should be removed
@@ -93,7 +93,8 @@ public:
       size(0),
       isFixed(true),
       parent(NULL),
-      allocSite(0) {
+      allocSite(0),
+      isExternalized(false) {
   }
 
   MemoryObject(uint64_t _address, unsigned _size,
@@ -110,7 +111,8 @@ public:
       isFixed(_isFixed),
       isUserSpecified(false),
       parent(_parent),
-      allocSite(_allocSite) {
+      allocSite(_allocSite),
+      isExternalized(false) {
   }
 
   ~MemoryObject();

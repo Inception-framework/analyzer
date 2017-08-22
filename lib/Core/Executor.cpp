@@ -117,7 +117,7 @@ using namespace klee;
 #include "inception/RealContextSaver.h"
 #include "inception/RealInterrupt.h"
 #include "inception/RealTarget.h"
-#include "inception/RealMemory.h"
+// #include "inception/RealMemory.h"
 #include "inception/Monitor.h"
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -364,9 +364,6 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString) {
 
-  Inception::RealMemory::init();
-  Inception::Monitor::init(this);
-
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
   if (!coreSolver) {
@@ -425,6 +422,8 @@ const Module *Executor::setModule(llvm::Module *module,
   assert(!kmodule && module && "can only register one module"); // XXX gross
 
   kmodule = new KModule(module);
+  // Inception::RealMemory::init(module);
+  Inception::Monitor::init(this);
 
   // Initialize the context.
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
@@ -544,6 +543,8 @@ extern void *__dso_handle __attribute__ ((__weak__));
 void Executor::initializeGlobals(ExecutionState &state) {
   Module *m = kmodule->module;
 
+  Inception::SymbolsTable* ST = new Inception::SymbolsTable(m);
+
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
@@ -605,9 +606,6 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // allocate and initialize globals, done in two passes since we may
   // need address of a global in order to initialize some other one.
 
-  Inception::SymbolsTable* ST = new Inception::SymbolsTable();
-  uint64_t address = 0;
-
   // allocate memory objects for all globals
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
@@ -647,8 +645,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
 			(int)i->getName().size(), i->getName().data());
       }
 
-      MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGlobal=*/true, /*allocSite=*/v,
+      MemoryObject *mo = memory->allocate(size, /*isSymbolic=*/false,
+                                          /*isExternalized=*/false, /*allocSite=*/v,
                                           /*alignment=*/globalObjectAlignment);
       ObjectState *os = bindObjectInState(state, mo, false);
       globalObjects.insert(std::make_pair(v, mo));
@@ -674,10 +672,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
-      address = ST->lookUpVariable(i->getName()).first;
+      Inception::SymbolInfo* Info;
+      Info = ST->lookUpVariable(i->getName());
       if (i->getName().equals(StringRef("STACK"))) {
 
-        size = ST->lookUpSection(".stack").second;
+        size = ST->lookUpSection(".stack")->size;
 
         Value* Reg = m->getGlobalVariable("STACK");
         if (Reg == NULL) {
@@ -701,26 +700,29 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
 
       MemoryObject *mo;
-      if(address == 0) {
+      if(Info == NULL) {
         mo = memory->allocate(size, /*isLocal=*/false,
           /*isGlobal=*/true, /*allocSite=*/v,
           /*alignment=*/globalObjectAlignment);
       }
       else {
-        printf("[Executor]\n\tAllocating object %s at 0x%08x of size " \
-          "0x%08x\n", i->getName().str().c_str(), address, size);
-        mo = memory->allocateCustom(address, size, false, true, v,
-          globalObjectAlignment);
 
-          std::string Str;
-          llvm::raw_string_ostream info(Str);
-          std::string alloc_info;
-          mo->getAllocInfo(alloc_info);
-          info << "object at " << mo->address
-               << " of size " << mo->size << "\n"
-               << "\t\t" << alloc_info << "\n";
+        printf("[Executor]\n\tAllocating object %s at 0x%lx of size " \
+          "0x%lx\n",
+          i->getName().str().c_str(),Info->base, Info->size);
 
-          llvm::errs() << info.str() << "\n";
+          mo = memory->allocateCustom(Info->base, size, Info->symbolic,
+          Info->redirected, v, globalObjectAlignment);
+
+          // std::string Str;
+          // llvm::raw_string_ostream info(Str);
+          // std::string alloc_info;
+          // mo->getAllocInfo(alloc_info);
+          // info << "object at " << mo->address
+          //      << " of size " << mo->size << "\n"
+          //      << "\t\t" << alloc_info << "\n";
+          //
+          // llvm::errs() << info.str() << "\n";
       }
       if (!mo)
         llvm::report_fatal_error("out of memory");
@@ -3453,43 +3455,52 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   Expr::Width type = (isWrite ? value->getWidth() :
                      getWidthForLLVMType(target->inst->getType()));
 
-  ConstantExpr *addr_ce = dyn_cast<ConstantExpr>(address);
+  // Inception::Monitor::traceIO(address, value, isWrite, target);
+  // ConstantExpr *addr_ce = dyn_cast<ConstantExpr>(address);
 
-  if (addr_ce != NULL) {
-   uint64_t concrete_address = addr_ce->getZExtValue();
-
-   if (Inception::RealMemory::is_real(concrete_address) == true) {
-
-     Inception::Monitor::traceIO(address, value, isWrite, target);
-
-     if (isWrite) {
-
-       ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-       uint64_t concrete_address = address_ce->getZExtValue();
-
-       ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
-       uint64_t concrete_value = value_ce->getZExtValue();
-
-       Inception::RealTarget::write(concrete_address, concrete_value, type);
-       return;
-     } else {
-
-       // uint64_t concrete_value = 500;
-       ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-       uint64_t concrete_address = address_ce->getZExtValue();
-
-       uint64_t concrete_value = 0;
-
-       // ref<Expr> result = ConstantExpr::alloc(0, Expr::Int32);
-
-       ref<Expr> result = Inception::RealTarget::read(concrete_address,
-                                                      &concrete_value, type);
-       bindLocal(target, state, result);
-
-       return;
-     }
-   }
-  }
+  // if (addr_ce != NULL) {
+  //  uint64_t concrete_address = addr_ce->getZExtValue();
+  //
+  //  if (Inception::RealMemory::is_real(concrete_address) == true) {
+  //
+  //    if (Inception::RealMemory::is_symbolic(concrete_address) == true) {
+  //
+  //
+  //    }
+  //
+  //    Inception::Monitor::traceIO(address, value, isWrite, target);
+  //
+  //    if (isWrite) {
+  //
+  //      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+  //      uint64_t concrete_address = address_ce->getZExtValue();
+  //
+  //      ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
+  //      uint64_t concrete_value = value_ce->getZExtValue();
+  //
+  //      Inception::RealTarget::write(concrete_address, concrete_value, type);
+  //      return;
+  //    } else {
+  //
+  //      // uint64_t concrete_value = 500;
+  //      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+  //      uint64_t concrete_address = address_ce->getZExtValue();
+  //
+  //      uint64_t concrete_value = 0;
+  //
+  //      // ref<Expr> result = ConstantExpr::alloc(0, Expr::Int32);
+  //
+  //      ref<Expr> result = Inception::RealTarget::read(concrete_address,
+  //                                                     &concrete_value, type);
+  //      bindLocal(target, state, result);
+  //
+  //      return;
+  //    }
+  //  }
+  // }
+  ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+  uint64_t concrete_address = address_ce->getZExtValue();
+  uint64_t concrete_value = 0;
 
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
@@ -3512,6 +3523,22 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   if (success) {
     const MemoryObject *mo = op.first;
+
+    if(mo->isExternalized) {
+      if(isWrite) {
+        ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
+        uint64_t concrete_value = value_ce->getZExtValue();
+
+        Inception::RealTarget::write(concrete_address, concrete_value, type);
+      } else {
+        uint64_t concrete_value = 0;
+
+        ref<Expr> result = Inception::RealTarget::read(concrete_address,
+                                            &concrete_value, type);
+        bindLocal(target, state, result);
+      }
+      return;
+    }
 
     if (MaxSymArraySize && mo->size>=MaxSymArraySize) {
       address = toConstant(state, address, "max-sym-array-size");

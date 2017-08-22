@@ -99,12 +99,12 @@ ExecutionState *RealInterrupt::next_without_priority() {
 
   ExecutionState *state = NULL;
 
-  unsigned fire = rand() % 1000000;
-
-  if (fire == 666) {
-
-    RealInterrupt::raise(27);
-  }
+  // unsigned fire = rand() % 1000000;
+  //
+  // if (fire == 666) {
+  //
+  //   RealInterrupt::raise(27);
+  // }
 
   if (RealInterrupt::ending) {
     // printf("[RealInterrupt] ending ...\n");

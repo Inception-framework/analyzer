@@ -2,15 +2,14 @@
 #define CONFIGURATOR_H
 #include <json/json.h>
 
+#include "inception/SymbolsTable.h"
+
 namespace Inception {
 
 #ifndef PARSER_CALLBACK
 #define PARSER_CALLBACK
 
 typedef void (*ParserInterruptCB)(std::string, uint32_t, uint32_t, uint32_t);
-
-typedef void (*ParserMemoryCB)(std::string, uint32_t, uint32_t);
-
 #endif
 
 class Configurator {
@@ -29,7 +28,7 @@ public:
 
   static unsigned int interrupt_index;
 
-  static bool next_memory(ParserMemoryCB callback);
+  static bool next_memory(SymbolsTable *sy);
 
   static unsigned int memory_index;
 

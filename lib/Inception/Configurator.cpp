@@ -54,7 +54,7 @@ std::string Configurator::getAsString(std::string section, std::string category,
   if (Configurator::file_present == false)
     return NULL;
 
-  const Json::Value Section= (*Configurator::root)[section];
+  const Json::Value Section = (*Configurator::root)[section];
 
   return Section[line].get(category, "").asString();
 }
@@ -81,7 +81,7 @@ uint32_t Configurator::getAsInteger(std::string section, std::string category,
   return address;
 }
 
-bool Configurator::next_memory(ParserMemoryCB callback) {
+bool Configurator::next_memory(SymbolsTable *sy) {
 
   Configurator::init();
 
@@ -91,6 +91,7 @@ bool Configurator::next_memory(ParserMemoryCB callback) {
   const Json::Value realMemory = (*Configurator::root)["RealMemory"];
 
   uint32_t address, size;
+  bool symbolic;
 
   std::stringstream ss;
 
@@ -112,7 +113,15 @@ bool Configurator::next_memory(ParserMemoryCB callback) {
     ss >> size;
     ss.clear();
 
-    callback(name, address, size);
+    symbolic = false;
+        // realMemory[Configurator::memory_index].get("symbolic", false).asBool();
+
+    char* dst = new char[name.length()+1];
+    name.copy(dst, name.length());
+    dst[name.length()]='\0';
+
+    // (sy->*callback)(llvm::StringRef(name), address, size, symbolic);
+    sy->addSymbol(llvm::StringRef(dst, name.length()), address, size, symbolic);
 
     Configurator::memory_index++;
 

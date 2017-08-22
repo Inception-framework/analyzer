@@ -167,8 +167,8 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
   return res;
 }
 
-MemoryObject *MemoryManager::allocateCustom(uint64_t address, uint64_t size, bool isLocal,
-                                      bool isGlobal,
+MemoryObject *MemoryManager::allocateCustom(uint64_t address, uint64_t size, bool symbolic,
+                                      bool isExternalized,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
   if (size > 10 * 1024 * 1024)
@@ -185,9 +185,14 @@ MemoryObject *MemoryManager::allocateCustom(uint64_t address, uint64_t size, boo
   }
 
   ++stats::allocations;
-  MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
+  MemoryObject *res = new MemoryObject(address, size, false, true, false,
                                        allocSite, this);
 
+  if(isExternalized)
+    printf("Allocating external object !\n");
+
+  res->isExternalized = isExternalized;
+  res->isSymbolic = symbolic;
   res->isFixed = true;
   res->isUserSpecified = true;
 
