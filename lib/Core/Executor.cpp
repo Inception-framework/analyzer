@@ -3651,10 +3651,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else {
 
-      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-      uint64_t concrete_address = address_ce->getZExtValue();
-
-      errs() << "At address : " << concrete_address;
+      // ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+      // uint64_t concrete_address = address_ce->getZExtValue();
+      //
+      // errs() << "At address : " << concrete_address;
 
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));

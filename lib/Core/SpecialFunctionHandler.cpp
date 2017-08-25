@@ -151,8 +151,12 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 
     add("inception_dump_registers", handleDumpRegisters, true),
     add("inception_dump_stack", handleDumpStack, true),
+
     add("disable_irq", handleDisableIRQ, true),
     add("enable_irq", handleEnableIRQ, true),
+
+    add("inception_sv_call", handleSVCall, true),
+
 #undef addDNR
 #undef add
 };
@@ -843,4 +847,10 @@ void SpecialFunctionHandler::handleDisableMemTrace(ExecutionState &state,
                               KInstruction *target,
                               std::vector<ref<Expr> > &arguments) {
   Inception::Monitor::disableMemTrace();
+}
+
+void SpecialFunctionHandler::handleSVCall(ExecutionState &state,
+                              KInstruction *target,
+                              std::vector<ref<Expr> > &arguments) {
+  Inception::RealInterrupt::raise(11);
 }
