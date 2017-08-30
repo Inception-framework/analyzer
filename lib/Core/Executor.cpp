@@ -711,6 +711,18 @@ void Executor::initializeGlobals(ExecutionState &state) {
         }
       }
 
+      if(v->getName().find("_SVC_") != std::string::npos ) {
+        uint64_t address;
+
+        std::stringstream ss;
+        ss << std::hex << v->getName().substr(5, 8).str();
+        ss >> address;
+
+        Info = new Inception::SymbolInfo(v->getName(), address, size, false, false);
+        klee_warning("Allocating SymbolInfo for SVCall !");
+        llvm:errs() << "At " << address << "\n";
+      }
+
       MemoryObject *mo;
       if(Info == NULL) {
         mo = memory->allocate(size, /*isLocal=*/false,
