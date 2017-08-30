@@ -555,6 +555,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // object. given that we use malloc to allocate memory in states this also
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
+  uint32_t device_address;
   for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
     Function *f = static_cast<Function *>(i);
     ref<ConstantExpr> addr(0);
@@ -566,11 +567,22 @@ void Executor::initializeGlobals(ExecutionState &state) {
         !externalDispatcher->resolveSymbol(f->getName())) {
       addr = Expr::createPointer(0);
     } else {
-      addr = Expr::createPointer((unsigned long) (void*) f);
-      legalFunctions.insert((uint64_t) (unsigned long) (void*) f);
+
+      // look-up in the symbol table to find the device address
+      Inception::SymbolInfo *Info;
+      Info = ST->lookUpVariable(f->getName());
+      if (Info == NULL) {
+      } else {
+        device_address = Info->base;
+        printf("Klee &%s %p to %p\n", f->getName(), f, device_address);
+      }
+
+      addr = Expr::createPointer((unsigned long)(void *)device_address);
+      legalFunctions.insert((uint64_t)(unsigned long)(void *)device_address);
     }
 
     globalAddresses.insert(std::make_pair(f, addr));
+    device_to_host_map.insert(std::make_pair(device_address, f));
   }
 
   // Disabled, we don't want to promote use of live externals.
@@ -1956,7 +1968,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         if (res.first) {
           uint64_t addr = value->getZExtValue();
           if (legalFunctions.count(addr)) {
-            f = (Function*) addr;
+            f = device_to_host_map.find(addr)->second;
 
             // Don't give warning on unique resolution
             if (res.second || !first)
