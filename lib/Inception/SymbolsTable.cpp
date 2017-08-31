@@ -100,7 +100,7 @@ void SymbolsTable::initTable() {
 
     SymSize = I->getSize();
 
-    // printf("\tSections %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
+    // printf("\tSection %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
     //        SymAddr, SymSize);
     SymbolInfo *Info = new SymbolInfo(SymName, SymAddr, SymSize, false, false);
 
