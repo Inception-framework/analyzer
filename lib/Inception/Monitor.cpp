@@ -44,7 +44,7 @@ std::map<std::string, uint64_t> Monitor::followed = {
     {std::pair<std::string, uint64_t>("ZF", 0)},
     {std::pair<std::string, uint64_t>("CF", 0)},
     {std::pair<std::string, uint64_t>("VF", 0)},
-    {std::pair<std::string, uint64_t>("STACK", 0)},
+    {std::pair<std::string, uint64_t>(".stack", 0)},
 };
 
 Monitor::Monitor() {}
@@ -109,7 +109,7 @@ void Monitor::dump_stack(int begin, int end) {
   }
 
   std::map<std::string, uint64_t>::iterator it =
-      Monitor::followed.find("STACK");
+      Monitor::followed.find(".stack");
 
   // for (int i = begin; i < end; i++) {
 

@@ -684,32 +684,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
-      Inception::SymbolInfo* Info;
-      Info = ST->lookUpVariable(i->getName());
-      if (i->getName().equals(StringRef("STACK"))) {
-
-        size = ST->lookUpSection(".stack")->size;
-
-        Value* Reg = m->getGlobalVariable("STACK");
-        if (Reg == NULL) {
-          Type* Ty = ArrayType::get(
-              IntegerType::get(m->getContext(), 4), size);
-
-          Constant* Initializer = Constant::getNullValue(Ty);
-
-          GlobalVariable* gvar_ptr_SP =
-              new GlobalVariable(*m,  // Module
-                                 Ty,                 // Type
-                                 false,              // isConstant
-                                 GlobalValue::CommonLinkage, Initializer, "STACK");
-          gvar_ptr_SP->setAlignment(4);
-
-          Instruction* to = dyn_cast<Instruction>(gvar_ptr_SP);
-          Instruction* from = dyn_cast<Instruction>((GlobalVariable*)v);
-
-          llvm::ReplaceInstWithInst (from, to);
-        }
-      }
+      Inception::SymbolInfo* Info = NULL;
 
       if(v->getName().find("_SVC_") != std::string::npos ) {
         uint64_t address;
@@ -721,6 +696,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
         Info = new Inception::SymbolInfo(v->getName(), address, size, false, false);
         klee_warning("Allocating SymbolInfo for SVCall !");
         llvm:errs() << "At " << address << "\n";
+      } else {
+        Info = ST->lookUpVariable(i->getName());
+        if(Info == NULL || Info->size == 0)
+          Info = ST->lookUpSection(i->getName());
       }
 
       MemoryObject *mo;
@@ -731,9 +710,9 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
       else {
 
-        printf("[Executor]\n\tAllocating object %s at 0x%lx of size " \
+        printf("[Executor]\tAllocating object %s at 0x%lx of size " \
           "0x%lx\n",
-          i->getName().str().c_str(),Info->base, Info->size);
+          i->getName().str().c_str(),Info->base, size);
 
           mo = memory->allocateCustom(Info->base, size, Info->symbolic,
           Info->redirected, v, globalObjectAlignment);
@@ -3675,10 +3654,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else {
 
-      // ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-      // uint64_t concrete_address = address_ce->getZExtValue();
-      //
-      // errs() << "At address : " << concrete_address;
+      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+      uint64_t concrete_address = address_ce->getZExtValue();
+
+      std::stringstream stream;
+      stream << "[MemFault] At address : 0x";
+      stream << std::hex << concrete_address;
+      std::string result( stream.str() );
+      // errs() <<  << result << "\n";
+      klee_warning(result.c_str());
 
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));
