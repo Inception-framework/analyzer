@@ -183,6 +183,8 @@ private:
   /// globals that have no representative object (i.e. functions).
   std::map<const llvm::GlobalValue*, ref<ConstantExpr> > globalAddresses;
 
+  std::map<uint32_t, llvm::Function *> device_to_host_map;
+
   /// The set of legal function addresses, used to validate function
   /// pointers. We use the actual Function* address as the function address.
   std::set<uint64_t> legalFunctions;
