@@ -256,7 +256,7 @@ ExecutionState *RealInterrupt::create_interrupt_state() {
 
   // Save the new interrupt state
   Inception::RealInterrupt::interrupt_state = _interrupt_state;
-  interrupt_state->addressSpace.cowKey = current->addressSpace.cowKey;
+  interrupt_state->addressSpace.cowKey = current->addressSpace.cowKey - 1;
   interrupt_state->description = function_name;
   interrupt_state->interrupted = true;
 
