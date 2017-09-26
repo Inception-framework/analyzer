@@ -136,6 +136,8 @@ static unsigned resolveIntrinsicID(Function* called) {
   default:
     return 0;
   }
+
+  return 1;
 }
 
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {

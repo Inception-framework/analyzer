@@ -574,11 +574,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
       if (Info == NULL) {
       } else {
         device_address = Info->base;
-        printf("Klee &%s %p to %p\n", f->getName(), f, device_address);
       }
 
-      addr = Expr::createPointer((unsigned long)(void *)device_address);
-      legalFunctions.insert((uint64_t)(unsigned long)(void *)device_address);
+      addr = Expr::createPointer((unsigned long)device_address);
+      legalFunctions.insert((unsigned long)device_address);
     }
 
     globalAddresses.insert(std::make_pair(f, addr));
@@ -694,8 +693,6 @@ void Executor::initializeGlobals(ExecutionState &state) {
         ss >> address;
 
         Info = new Inception::SymbolInfo(v->getName(), address, size, false, false);
-        klee_warning("Allocating SymbolInfo for SVCall !");
-        llvm:errs() << "At " << address << "\n";
       } else {
         Info = ST->lookUpVariable(i->getName());
         if(Info == NULL || Info->size == 0)
@@ -710,26 +707,20 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
       else {
 
-        printf("[Executor]\tAllocating object %s at 0x%lx of size " \
-          "0x%lx\n",
+        klee_message("Memory Object %s at 0x%lx of size 0x%lx",
           i->getName().str().c_str(),Info->base, size);
 
           mo = memory->allocateCustom(Info->base, size, Info->symbolic,
           Info->redirected, v, globalObjectAlignment);
 
           if(mo->isSymbolic) {
-            printf("External memory tagged as symbolic !\n");
+            klee_message(" -> symbolic\n");
             executeMakeSymbolic(state, mo, Info->name);
+          } else if(Info->redirected){
+            klee_message(" -> externe\n");
+          } else {
+            klee_message(" -> local\n");
           }
-          // std::string Str;
-          // llvm::raw_string_ostream info(Str);
-          // std::string alloc_info;
-          // mo->getAllocInfo(alloc_info);
-          // info << "object at " << mo->address
-          //      << " of size " << mo->size << "\n"
-          //      << "\t\t" << alloc_info << "\n";
-          //
-          // llvm::errs() << info.str() << "\n";
       }
       if (!mo)
         llvm::report_fatal_error("out of memory");
@@ -1341,7 +1332,7 @@ void Executor::printDebugInstructions(ExecutionState &state) {
 void Executor::stepInstruction(ExecutionState &state) {
   printDebugInstructions(state);
   // if (statsTracker)
-    // statsTracker->stepInstruction(state);
+  //   statsTracker->stepInstruction(state);
 
   ++stats::instructions;
   state.prevPC = state.pc;
@@ -3662,7 +3653,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       stream << std::hex << concrete_address;
       std::string result( stream.str() );
       // errs() <<  << result << "\n";
-      klee_warning(result.c_str());
+      klee_warning("%s",result.c_str());
 
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));

@@ -122,6 +122,8 @@ private:
   static std::priority_queue<Interrupt *, std::vector<Interrupt *>,
                              InterruptComparator>
       pending_interrupts;
+
+  static bool isDeviceConnected;
 };
-}
+} // namespace Inception
 #endif

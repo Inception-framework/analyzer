@@ -38,7 +38,9 @@ klee::Executor *RealInterrupt::executor = NULL;
 
 bool RealInterrupt::ending = false;
 
-uint32_t RealInterrupt::irq_id_base_addr = NULL;
+uint32_t RealInterrupt::irq_id_base_addr = 0;
+
+bool RealInterrupt::isDeviceConnected = true;
 
 RealInterrupt::RealInterrupt() {}
 
@@ -57,21 +59,28 @@ void RealInterrupt::init(klee::Executor *_executor) {
 
   irq_id_base_addr = Configurator::getAsInteger("Stub", "address", 0);
 
-  // configure trace
-  if (RealTarget::inception_device == NULL)
-    RealTarget::inception_device = jtag_init();
+  if (Configurator::getAsInteger("Analyzer", "Redirection", 0) == 1)
+    isDeviceConnected = true;
+  else
+    isDeviceConnected = false;
 
-  Watcher watcher = &RealInterrupt::raise;
-  // Watcher watcher = &watch_and_avoid;
-  trace_init(Inception::RealTarget::inception_device, watcher);
+  if (isDeviceConnected) {
+    // configure trace
+    if (RealTarget::inception_device == NULL)
+      RealTarget::inception_device = jtag_init();
+
+    Watcher watcher = &RealInterrupt::raise;
+    // Watcher watcher = &watch_and_avoid;
+    trace_init(Inception::RealTarget::inception_device, watcher);
+  }
 }
 
 void RealInterrupt::AddInterrupt(std::string handler_name, uint32_t id,
                                  uint32_t group_priority,
                                  uint32_t internal_priority) {
 
-  printf("AddInterrupt(%s, %d, %d, %d)\n", handler_name.c_str(), id,
-         group_priority, internal_priority);
+  // printf("AddInterrupt(%s, %d, %d, %d)\n", handler_name.c_str(), id,
+  //        group_priority, internal_priority);
 
   interrupts_vector.insert(std::pair<uint32_t, Interrupt *>(
       id, new Interrupt(handler_name, id, group_priority, internal_priority)));
@@ -82,22 +91,19 @@ void RealInterrupt::raise(int id) {
   try {
     Interrupt *interrupt = interrupts_vector.at(id);
 
-    llvm::errs() << "[RealInterrupt] Raise interrupt id : " << id << "\n";
+    klee_message("Raising interrupt %d", id);
 
     // When added the priority_queue will sort the queue
     // according to the user defined priority
     RealInterrupt::pending_interrupts.push(interrupt);
   } catch (const std::out_of_range &oor) {
-
-    llvm::errs() << "[RealInterrupt] Unknown interrupt id : " << id << "\n";
+    klee_warning("Unknown interrupt %d ", id);
   }
 }
 
 RealInterrupt::~RealInterrupt() {}
 
 ExecutionState *RealInterrupt::next_without_priority() {
-
-  ExecutionState *state = NULL;
 
   // unsigned fire = rand() % 1000000;
   //
@@ -188,14 +194,13 @@ void RealInterrupt::stop_interrupt() {
 
   Interrupt *interrupt = RealInterrupt::current_interrupt;
 
-  jtag_write(RealTarget::inception_device,
-             irq_id_base_addr + (interrupt->id * 4), 0, 32);
+  if (isDeviceConnected)
+    jtag_write(RealTarget::inception_device,
+               irq_id_base_addr + (interrupt->id * 4), 0, 32);
 
   RealInterrupt::interrupted = false;
 
   RealInterrupt::ending = true;
-
-  // llvm::errs() << "[RealInterrupt] Return from interrupt ...\n\n";
 
   RealInterrupt::current_interrupt = NULL;
 }
@@ -206,20 +211,10 @@ ExecutionState *RealInterrupt::create_interrupt_state() {
 
   ExecutionState *current = RealInterrupt::executor->getExecutionState();
 
-  // Save the function where we were when the interrupt occured
-  // Inception::RealInterrupt::caller =
-  // current->pc->inst->getParent()->getParent();
-
-  // bool b =
-  // Inception::RealInterrupt::caller->getName().find("klee_overshift_check") !=
-  // std::string::npos;
   bool a = current->prevPC->inst->getParent()->getParent()->getName().find(
                "klee_overshift_check") != std::string::npos;
 
   if (a) {
-
-    // printf("[RealInterrupt] Abort interrupt from %s ...\n",
-    // current->prevPC->inst->getParent()->getParent()->getName().str().c_str());
     Inception::RealInterrupt::caller = NULL;
     return NULL;
   }
@@ -240,11 +235,10 @@ ExecutionState *RealInterrupt::create_interrupt_state() {
       RealInterrupt::executor->getKModule()->module->getFunction(function_name);
   if (f_interrupt == NULL)
     klee_error("[RealInterrupt] Fail to resolve interrupt handler name : ",
-               function_name.str());
+               function_name.str().c_str());
   else
-    llvm::errs() << "[RealInterrupt] Suspending "
-                 << Inception::RealInterrupt::caller->getName()
-                 << " to execute " << function_name << "\n";
+    klee_message("[RealInterrupt] Suspending %s to execute %s ",
+                 caller->getName().str().c_str(), function_name.str().c_str());
 
   // Copy the current state
   ExecutionState *_interrupt_state = current->branch();
@@ -269,7 +263,7 @@ ExecutionState *RealInterrupt::create_interrupt_state() {
 
   KFunction *kf =
       RealInterrupt::executor->getKModule()->functionMap[f_interrupt];
-  bool prevOpcode = interrupt_state->prevPC->inst->getOpcode();
+  uint8_t prevOpcode = interrupt_state->prevPC->inst->getOpcode();
 
   KInstIterator restorePC;
 
@@ -279,33 +273,6 @@ ExecutionState *RealInterrupt::create_interrupt_state() {
   case Instruction::Br: {
     restorePC = interrupt_state->prevPC;
     interrupt_state->pushFrame(interrupt_state->prevPC, kf);
-
-    // llvm::errs() << "[RealInterrupt] When executing : " << *restorePC->inst
-    // << "  "
-    // << restorePC->inst->getParent()->getParent()->getName() << "\n";
-    //
-    // std::string srcFile = restorePC->info->file;
-    // if (srcFile.length() > 42)
-    //   srcFile = srcFile.substr(42);
-    //
-    // llvm::errs() << "\t(src line: " << restorePC->info->line << " of " <<
-    // srcFile << "\n"; std::vector<StackFrame>::iterator stackSeek =
-    // current->stack.begin(); std::vector<StackFrame>::iterator stackEnd =
-    // current->stack.end(); int stack_idx = 0; errs() << "asm line " <<
-    // restorePC->info->assemblyLine << "\n"; while (stackSeek != stackEnd) {
-    //   errs() << "stack idx " << stack_idx << " in ";
-    //   errs() << stackSeek->kf->function->getName();
-    //
-    //   if (stackSeek->caller) {
-    //     errs() << " line " << stackSeek->caller->info->assemblyLine;
-    //     errs() << "\n";
-    //   } else {
-    //     errs() << " no caller\n";
-    //   }
-    //   ++stackSeek;
-    //   ++stack_idx;
-    // }
-
     break;
   }
   default:

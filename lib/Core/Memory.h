@@ -59,16 +59,16 @@ public:
 
   bool isUserSpecified;
 
-  bool isExternalized;
-
-  bool isSymbolic;
-
   MemoryManager *parent;
 
   /// "Location" for which this memory object was allocated. This
   /// should be either the allocating instruction or the global object
   /// it was allocated for (or whatever else makes sense).
   const llvm::Value *allocSite;
+
+  bool isExternalized;
+
+  bool isSymbolic;
 
   /// A list of boolean expressions the user has requested be true of
   /// a counterexample. Mutable since we play a little fast and loose

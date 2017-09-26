@@ -50,11 +50,10 @@ namespace klee {
 
     /// Epoch counter used to control ownership of objects.
     mutable unsigned cowKey;
-
   public:
     AddressSpace() : cowKey(1) {}
     AddressSpace(const AddressSpace &b)
-        : cowKey(++b.cowKey), objects(b.objects) {}
+        : objects(b.objects), cowKey(++b.cowKey) {}
     ~AddressSpace() {}
 
     /// Resolve address to an ObjectPair in result.

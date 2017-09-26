@@ -67,13 +67,13 @@ uint32_t Configurator::getAsInteger(std::string section, std::string category,
   if (Configurator::file_present == false)
     return 0;
 
-  const Json::Value Section = (*Configurator::root)["Stub"];
+  const Json::Value Section = (*Configurator::root)[section];
 
   uint32_t address;
 
   std::stringstream ss;
 
-  std::string s_address = Section[line].get("address", "0").asString();
+  std::string s_address = Section[line].get(category, "").asString();
   ss << std::hex << s_address;
   ss >> address;
   ss.clear();
@@ -126,8 +126,7 @@ bool Configurator::next_memory(SymbolsTable *sy) {
     Configurator::memory_index++;
 
     return true;
-  } else
-    Configurator::file_present == false;
+  }
 
   return false;
 }
@@ -181,8 +180,7 @@ bool Configurator::next_interrupt(ParserInterruptCB callback) {
     Configurator::interrupt_index++;
 
     return true;
-  } else
-    Configurator::file_present == false;
+  }
 
   return false;
 }

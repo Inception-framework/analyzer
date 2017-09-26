@@ -53,8 +53,8 @@ public:
 
     SymbolInfo *Info = new SymbolInfo(name, base, size, symolic, true);
 
-    printf("Adding symbol(%s, 0x%08x, 0x%08x)\n", name.str().c_str(), Info->base,
-           Info->size);
+    //printf("Adding symbol(%s, 0x%08x, 0x%08x)\n", name.str().c_str(), Info->base,
+    //       Info->size);
 
     symbols.insert(std::pair<StringRef, SymbolInfo *>(name, Info));
   }
@@ -62,13 +62,13 @@ public:
   void dump() {
     std::map<StringRef, SymbolInfo *>::iterator it;
 
-    uint64_t base, limit;
+    // uint64_t base, limit;
 
     for (it = symbols.begin(); it != symbols.end(); ++it) {
 
       SymbolInfo *I = it->second;
 
-      printf("\Symbol %s [0x%lx:0x%lx]\r\n", it->first.str().c_str(), I->base, I->size);
+      printf("Symbol %s [0x%lx:0x%lx]\r\n", it->first.str().c_str(), I->base, I->size);
     }
     printf("------------------------------\n");
   }

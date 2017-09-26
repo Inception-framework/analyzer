@@ -7,7 +7,7 @@ using namespace llvm;
 
 namespace Inception {
 
-SymbolsTable::SymbolsTable(llvm::Module* mod) {
+SymbolsTable::SymbolsTable(llvm::Module *mod) {
 
   disable = false;
 
@@ -33,8 +33,7 @@ void SymbolsTable::initExtern(llvm::Module *mod) {
 
   std::map<StringRef, SymbolInfo *>::iterator it;
 
-  for (it = symbols.begin();
-       it != symbols.end(); ++it) {
+  for (it = symbols.begin(); it != symbols.end(); ++it) {
 
     SymbolInfo *I = it->second;
 
@@ -42,9 +41,10 @@ void SymbolsTable::initExtern(llvm::Module *mod) {
 
     Constant *Initializer = Constant::getNullValue(Ty);
 
-    // printf("\tSymbol %s [0x%lx:0x%lx]\r\n", it->first.str().c_str(), I->base, I->size);
+    // printf("\tSymbol %s [0x%lx:0x%lx]\r\n", it->first.str().c_str(), I->base,
+    // I->size);
 
-    GlobalVariable* v = new GlobalVariable(*mod,  // Module
+    new GlobalVariable(*mod,  // Module
                        Ty,    // Type
                        false, // isConstant
                        GlobalValue::CommonLinkage, Initializer, it->first);
@@ -58,7 +58,7 @@ void SymbolsTable::initTable() {
   StringRef SymName;
   std::error_code ec;
 
-  if(disable)
+  if (disable)
     return;
 
   for (object::symbol_iterator I = Executable->symbols().begin(),
