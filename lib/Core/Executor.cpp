@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// #define INCEPTION_DEBUG 1
+
 #include "Executor.h"
 #include "Context.h"
 #include "CoreStats.h"
@@ -121,6 +123,11 @@ using namespace klee;
 #include "inception/Monitor.h"
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
+#ifdef INCEPTION_DEBUG
+  #include <thread>
+  #include "inception/Debugger.h"
+#endif
 
 namespace {
   cl::opt<bool>
@@ -1331,8 +1338,8 @@ void Executor::printDebugInstructions(ExecutionState &state) {
 
 void Executor::stepInstruction(ExecutionState &state) {
   printDebugInstructions(state);
-  // if (statsTracker)
-  //   statsTracker->stepInstruction(state);
+  if (statsTracker)
+    statsTracker->stepInstruction(state);
 
   ++stats::instructions;
   state.prevPC = state.pc;
@@ -2879,7 +2886,17 @@ void Executor::run(ExecutionState &initialState) {
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
-  // unsigned int div = 0;
+  #ifdef INCEPTION_DEBUG
+    Inception::Debugger* debugger = new Inception::Debugger();
+
+    std::thread debugger_server (&Inception::Debugger::run, debugger);
+    debugger_server.detach();
+
+    unsigned dump_n = 1;
+  #endif
+
+  // unsigned cycleCounter = 0;
+  std::string* last = 0;
   while (!states.empty() && !haltExecution) {
     // if (div++ & 0xf)
     //  Inception::RealInterrupt::raise(15);
@@ -2893,12 +2910,43 @@ void Executor::run(ExecutionState &initialState) {
 
     // normal fetch decode execute writeback
     KInstruction *ki = pstate->pc;
+
+    #ifdef INCEPTION_DEBUG
+      static Function* current = NULL;
+      debugger->updateInfo(pstate);
+
+      unsigned opcode = ki->inst->getOpcode();
+      if(opcode == Instruction::Ret || opcode == Instruction::Call)
+        dump_n = 2;
+
+      if(dump_n > 0) {
+        dump_n --;
+        if(current != ki->inst->getParent()->getParent()) {
+          current = ki->inst->getParent()->getParent();
+          debugger->notify(Inception::Monitor::dump(current, ki->inst));
+        }else if(current == NULL) {
+          current = ki->inst->getParent()->getParent();
+          debugger->notify(Inception::Monitor::dump(current, ki->inst));
+        }
+      }
+
+      // Allow remote control to stop execution
+      while(!debugger->isRunning(pstate));
+      // klee_message("step ...");
+    #endif
+
     stepInstruction(*pstate);
     executeInstruction(*pstate, ki);
     processTimers(pstate, MaxInstructionTime);
     checkMemoryUsage();
     updateStates(pstate);
-  }
+
+    #ifdef INCEPTION_DEBUG
+      // if(debugger->active_registers_dump)
+      if (current->hasFnAttribute("Decompiled"))
+        debugger->notify(Inception::Monitor::dump());
+    #endif
+   }
   delete searcher;
   searcher = 0;
 
@@ -3451,49 +3499,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   Expr::Width type = (isWrite ? value->getWidth() :
                      getWidthForLLVMType(target->inst->getType()));
 
-  // Inception::Monitor::traceIO(address, value, isWrite, target);
-  // ConstantExpr *addr_ce = dyn_cast<ConstantExpr>(address);
-
-  // if (addr_ce != NULL) {
-  //  uint64_t concrete_address = addr_ce->getZExtValue();
-  //
-  //  if (Inception::RealMemory::is_real(concrete_address) == true) {
-  //
-  //    if (Inception::RealMemory::is_symbolic(concrete_address) == true) {
-  //
-  //
-  //    }
-  //
-  //    Inception::Monitor::traceIO(address, value, isWrite, target);
-  //
-  //    if (isWrite) {
-  //
-  //      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-  //      uint64_t concrete_address = address_ce->getZExtValue();
-  //
-  //      ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
-  //      uint64_t concrete_value = value_ce->getZExtValue();
-  //
-  //      Inception::RealTarget::write(concrete_address, concrete_value, type);
-  //      return;
-  //    } else {
-  //
-  //      // uint64_t concrete_value = 500;
-  //      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-  //      uint64_t concrete_address = address_ce->getZExtValue();
-  //
-  //      uint64_t concrete_value = 0;
-  //
-  //      // ref<Expr> result = ConstantExpr::alloc(0, Expr::Int32);
-  //
-  //      ref<Expr> result = Inception::RealTarget::read(concrete_address,
-  //                                                     &concrete_value, type);
-  //      bindLocal(target, state, result);
-  //
-  //      return;
-  //    }
-  //  }
-  // }
   ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
   uint64_t concrete_address = address_ce->getZExtValue();
   uint64_t concrete_value = 0;
@@ -3652,6 +3657,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       std::string result( stream.str() );
       // errs() <<  << result << "\n";
       klee_warning("%s",result.c_str());
+
+      // #ifdef INCEPTION_DEBUG
+      //     debugger->notify(Inception::Monitor::dump(target->inst->getParent()->getParent(), target->inst));
+      //     debugger->notify(Inception::Monitor::dump());
+      // #endif
 
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));

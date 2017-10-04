@@ -1,5 +1,7 @@
 #include "inception/Monitor.h"
 
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include <fstream>
 
 // #include <thread>
@@ -70,12 +72,31 @@ void Monitor::follow(const llvm::GlobalVariable *i, uint64_t address) {
   }
 }
 
-void Monitor::dump() {
+std::string Monitor::dump(llvm::Function *function, llvm::Instruction *inst) {
+  std::error_code ErrorInfo;
+
+  std::string str;
+  llvm::raw_string_ostream info(str);
+
+  info << *function;
+
+  if (ErrorInfo) {
+    klee_error("Cannot save result into function.dump");
+  }
+
+  return "F\n\r" + info.str();
+}
+
+std::string Monitor::dump() {
 
   if (!Monitor::executor) {
     klee_warning("Monitor has not been initialized ...");
-    return;
+    return "";
   }
+
+  std::string all_info = "R\n\r";
+  std::ofstream log_file;
+  log_file.open("registers.dump", std::ios::out | std::ios::trunc);
 
   // uint64_t address = Monitor::followed.at(i->getName());
   for (auto b = Monitor::followed.begin(), e = Monitor::followed.end(); e != b;
@@ -92,18 +113,19 @@ void Monitor::dump() {
     ref<Expr> address_ce = klee::ConstantExpr::create(b->second, Expr::Int32);
 
     std::string info = executor->getAddressInfo(*state, address_ce);
+    all_info += info;
 
-    std::ofstream log_file;
-    log_file.open("registers.dump", std::ios::out | std::ios::app);
     log_file << b->first << "\n";
     log_file << info;
-    log_file.close();
   }
+  log_file.close();
+
+  return all_info;
 }
 
 void Monitor::dump_stack(int begin, int end) {
 
-  if(!Monitor::executor) {
+  if (!Monitor::executor) {
     klee_warning("Monitor has not been initialized ...");
     return;
   }
@@ -128,46 +150,7 @@ void Monitor::dump_stack(int begin, int end) {
   //}
 }
 
-void Monitor::init(Executor* _executor) {
-
-  executor = _executor;
-
-  // CURL *curl;
-  // CURLcode res;
-  //
-  // curl = curl_easy_init();
-  // if(curl) {
-  //   curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:3030");
-  //   /* example.com is redirected, so we tell libcurl to follow redirection */
-  //   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  //
-  //   /* Perform the request, res will get the return code */
-  //   res = curl_easy_perform(curl);
-  //   /* Check for errors */
-  //   if(res != CURLE_OK)
-  //     fprintf(stderr, "curl_easy_perform() failed: %s\n",
-  //             curl_easy_strerror(res));
-  //
-  //   /* always cleanup */
-  //   curl_easy_cleanup(curl);
-  // }
-}
-
-// void Monitor::run() {
-//
-//   Monitor::running = true;
-//
-//   // std::thread trace_thread (&Trace::run, trace);
-//   //
-//   // trace_thread.detach();
-//   while(running) {
-//
-//     char buffer[2048] = {0};
-//
-//     size_t write_data(&buffer, 2048, size_t nmemb, void *userp);
-//   }
-//
-// }
+void Monitor::init(Executor *_executor) { executor = _executor; }
 
 void Monitor::trace(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;

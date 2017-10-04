@@ -43,7 +43,9 @@ public:
 
   static void follow(const llvm::GlobalVariable *i, uint64_t address);
 
-  static void dump();
+  static std::string dump();
+
+  static std::string dump(llvm::Function* function, llvm::Instruction* inst);
 
   static void dump_stack(int begin, int end);
 
