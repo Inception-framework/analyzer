@@ -1612,7 +1612,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     KInstIterator kcaller = state.stack.back().caller;
     Instruction *caller = kcaller ? kcaller->inst : 0;
 
-    if(Inception::RealInterrupt::is_interrupted()) {
+    if (Inception::RealInterrupt::interrupted) {
       // llvm::errs() << " Return from  " << caller->getParent()->getParent()->getName() << "\n";
       // llvm::errs() << " Expected from  " << Inception::RealInterrupt::caller->getName() << "\n";
       if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
@@ -1641,7 +1641,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
       } else {
         state.pc = kcaller;
-        ++state.pc;
+        if (!interrupted)
+          ++state.pc;
       }
 
       if (!isVoidReturn) {
@@ -2878,29 +2879,22 @@ void Executor::run(ExecutionState &initialState) {
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
-  // unsigned cycleCounter = 0;
-  std::string* last = 0;
   while (!states.empty() && !haltExecution) {
-    // if( cycleCounter++ != 0 && (cycleCounter % 1000) == 0)
-    // Inception::RealInterrupt::raise(57);
-    //RealInterrupt returns the next interrupt state
-    pstate = Inception::RealInterrupt::next_without_priority();
-    if(pstate == NULL) {
-      pstate = &(searcher->selectState());
-      if(pstate->description.empty())
-        pstate->description = "MainState";
-    }
-    if( last != &(pstate->description) ) {
-      last = &(pstate->description);
-      // llvm::errs()<<" Executing : "<<pstate->description<<"\n";
-    }
+    // select a state
+    pstate = &(searcher->selectState());
+
+    // ask RealInterrupt to serve a pending interrupt if necessary
+    // it will "inject" a call to the handler
+    Inception::RealInterrupt::serve_pending_interrupt();
+
+    // normal fetch decode execute writeback
     KInstruction *ki = pstate->pc;
     stepInstruction(*pstate);
     executeInstruction(*pstate, ki);
     processTimers(pstate, MaxInstructionTime);
     checkMemoryUsage();
     updateStates(pstate);
-   }
+  }
   delete searcher;
   searcher = 0;
 

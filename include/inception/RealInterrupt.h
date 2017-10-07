@@ -73,36 +73,18 @@ public:
 
   static void init(klee::Executor *_executor);
 
-  static bool is_up(void);
-
   static void AddInterrupt(std::string handler_name, uint32_t id,
                            uint32_t group_priority, uint32_t internal_priority);
 
   static void raise(int id);
 
-  static bool is_interrupted();
-
   static void stop_interrupt();
 
-  static klee::ExecutionState *next_without_priority();
-
-  static klee::ExecutionState *next();
-
-  static bool masked();
-
-  static klee::ExecutionState *create_interrupt_state();
-
-  static klee::ExecutionState *interrupt_state;
-
   static llvm::Function *caller;
-
-  static bool ending;
 
   static Interrupt *current_interrupt;
 
   static klee::Executor *executor;
-
-  static klee::ExecutionState *getPending();
 
   static bool enabled;
 
@@ -110,7 +92,7 @@ public:
 
   static void enable();
 
-  static klee::RNG *random;
+  static void serve_pending_interrupt();
 
 private:
   static uint32_t irq_id_base_addr;

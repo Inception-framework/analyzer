@@ -28,30 +28,35 @@ bool RealInterrupt::enabled = true;
 
 Interrupt *RealInterrupt::current_interrupt = NULL;
 
-klee::ExecutionState *Inception::RealInterrupt::interrupt_state = NULL;
-
 bool RealInterrupt::interrupted = false;
 
 llvm::Function *RealInterrupt::caller = NULL;
 
 klee::Executor *RealInterrupt::executor = NULL;
 
-bool RealInterrupt::ending = false;
-
 uint32_t RealInterrupt::irq_id_base_addr = 0;
 
 bool RealInterrupt::isDeviceConnected = true;
 
+/*
+ * Constructor
+ */
 RealInterrupt::RealInterrupt() {}
 
-// void watch_and_avoid(int id) {}
+/*
+ * Destructor
+ */
+RealInterrupt::~RealInterrupt() {}
 
+/*
+ * This function initializes the interrupt module.
+ */
 void RealInterrupt::init(klee::Executor *_executor) {
 
-  srand(time(NULL));
-
+  // Klee executor
   RealInterrupt::executor = _executor;
 
+  // configuration via json
   ParserInterruptCB callback = &RealInterrupt::AddInterrupt;
 
   while (Configurator::next_interrupt(callback) == true)
@@ -70,11 +75,13 @@ void RealInterrupt::init(klee::Executor *_executor) {
       RealTarget::inception_device = jtag_init();
 
     Watcher watcher = &RealInterrupt::raise;
-    // Watcher watcher = &watch_and_avoid;
     trace_init(Inception::RealTarget::inception_device, watcher);
   }
 }
 
+/*
+ * Function used to add interrupt id / handler name static mapping
+ */
 void RealInterrupt::AddInterrupt(std::string handler_name, uint32_t id,
                                  uint32_t group_priority,
                                  uint32_t internal_priority) {
@@ -86,6 +93,9 @@ void RealInterrupt::AddInterrupt(std::string handler_name, uint32_t id,
       id, new Interrupt(handler_name, id, group_priority, internal_priority)));
 }
 
+/*
+ * Function called by the trace unit to notify the arrival of an interrupt
+ */
 void RealInterrupt::raise(int id) {
 
   try {
@@ -101,136 +111,90 @@ void RealInterrupt::raise(int id) {
   }
 }
 
-RealInterrupt::~RealInterrupt() {}
-
-ExecutionState *RealInterrupt::next_without_priority() {
-
-  // unsigned fire = rand() % 1000000;
-  //
-  // if (fire == 666) {
-  //
-  //   RealInterrupt::raise(27);
-  // }
-
-  if (RealInterrupt::ending) {
-    // printf("[RealInterrupt] ending ...\n");
-
-    if (RealInterrupt::interrupt_state == NULL)
-      throw std::runtime_error(
-          "[RealInterrupt] Can not end empty interrupt state ...");
-
-    RealInterrupt::executor->getPTree()->remove(
-        RealInterrupt::interrupt_state->ptreeNode);
-    delete RealInterrupt::interrupt_state;
-    RealInterrupt::ending = false;
-    RealInterrupt::interrupt_state = NULL;
-    return NULL;
-  }
-
-  // Are we in an interrupt ?
-  if (RealInterrupt::is_interrupted())
-    return RealInterrupt::interrupt_state;
-
-  if (RealInterrupt::enabled)
-    if (!RealInterrupt::pending_interrupts.empty())
-      return create_interrupt_state();
-
-  return NULL;
-}
-
 /*
- * Return the next
+ * This function must be executed when an interrupt handler executes its return
+ * instruction (see Executor.cpp).
+ * It will exit from the interrupted state, thus allowing other interrupts to be
+ * served.
+ * It will ack the stub on the device, to terminate the corresponding handler
+ * there.
  */
-ExecutionState *RealInterrupt::next() {
-
-  ExecutionState *state = NULL;
-
-  if (RealInterrupt::ending) {
-
-    if (RealInterrupt::interrupt_state == NULL)
-      throw std::runtime_error(
-          "[RealInterrupt] Can not end empty interrupt state ...");
-
-    RealInterrupt::executor->getPTree()->remove(
-        RealInterrupt::interrupt_state->ptreeNode);
-    delete RealInterrupt::interrupt_state;
-    RealInterrupt::ending = false;
-    RealInterrupt::interrupt_state = NULL;
-    return NULL;
-  }
-
-  // Are we in an interrupt ?
-  if (RealInterrupt::is_interrupted() && !RealInterrupt::masked())
-    // Is there any higher priority waiting ?
-    if ((state = RealInterrupt::getPending()) != NULL)
-      return state;
-    else
-      return RealInterrupt::interrupt_state;
-  else if (RealInterrupt::is_interrupted() && RealInterrupt::masked())
-    return RealInterrupt::interrupt_state;
-
-  if (!RealInterrupt::pending_interrupts.empty())
-    return create_interrupt_state();
-  else
-    return NULL;
-}
-
-ExecutionState *RealInterrupt::getPending() {
-
-  Interrupt *interrupt = RealInterrupt::pending_interrupts.top();
-
-  llvm::errs() << "Comparing : " << interrupt->state << " and "
-               << interrupt_state << "\n";
-
-  if (interrupt->state == RealInterrupt::interrupt_state)
-    return NULL;
-
-  return interrupt->state = RealInterrupt::create_interrupt_state();
-}
-
-bool RealInterrupt::masked() { return RealInterrupt::enabled; }
-
 void RealInterrupt::stop_interrupt() {
 
+  // get the interrupt currently being served, set by serve_interrupt().
   Interrupt *interrupt = RealInterrupt::current_interrupt;
 
+  // in case we are in real device mode, ack the stub to terminate the
+  // corresponding handler there
   if (isDeviceConnected)
     jtag_write(RealTarget::inception_device,
                irq_id_base_addr + (interrupt->id * 4), 0, 32);
 
+  // exit from the interrupted state and clean the current interrupt
   RealInterrupt::interrupted = false;
-
-  RealInterrupt::ending = true;
-
   RealInterrupt::current_interrupt = NULL;
 }
 
-bool RealInterrupt::is_interrupted() { return RealInterrupt::interrupted; }
+/*
+ * If necessary, this function serves a pending interrupt by calling the
+ * corresponding handler. It must be called during the execution loop, after
+ * selecting the execution state (see Executor.cpp)
+ *
+ *
+ * IMPORTANT NOTE
+ * When an interrupt occurs, we want to inject an instruction in the execution
+ * loop (a call to the interrupt handler)
+ * Unfortunately, in klee we cannot inject an instruction, at best we can take
+ * the instruction pc and transform it into the first instruction of the
+ * handler. This corresponds to pretending that prevPC was a call to the
+ * handler. Then we have to make sure to come back to the right instruction when
+ * we return from the interrupt. The right instruction is of course pc. So the
+ * best is to use a trick. In the frame we push caller = pc. In the return, if
+ * we are a handler, we set pc = caller. This works whatever insrtuction prevPC
+ * is when we "inject" the call to the handler.
+ * Instead, if we push the frame with caller = prevPC (normal for a call), the
+ * return sets pc = prevPC++. But we have modified pc to become the first
+ * instruction of the handler... So basically this cannot work if prevPC is a
+ * control flow instruciton that modifies pc...
+ *
+ *
+ * CURRENT LIMITATIONS
+ * 1. Interrupt nesting is not allowed
+ * 2. Hanlder resolution is static, and here we directly call the handler.
+ *    In the future we will call a function resolve(id) which will look in the
+ *    vector table in the heap to find the address of the handler,
+ *    save the context, call the proper handler with
+ *    icp technique, restore the context.
+ */
+void RealInterrupt::serve_pending_interrupt() {
+  // Return immediately if we do not have to serve interrupts (if any of the
+  // following conditions is true. The order is chose for efficiency
+  if (!RealInterrupt::enabled) // interrupts are disabled
+    return;
+  if (RealInterrupt::pending_interrupts.empty()) // no interrupt is pending
+    return;
+  if (RealInterrupt::interrupted) // already serving an interrupt
+    return;
 
-ExecutionState *RealInterrupt::create_interrupt_state() {
-
+  // get the current execution state
   ExecutionState *current = RealInterrupt::executor->getExecutionState();
 
-  bool a = current->prevPC->inst->getParent()->getParent()->getName().find(
-               "klee_overshift_check") != std::string::npos;
-
-  if (a) {
-    Inception::RealInterrupt::caller = NULL;
-    return NULL;
-  }
-
+  // get the caller i.e. who is being interrupted
   Inception::RealInterrupt::caller =
-      current->prevPC->inst->getParent()->getParent();
+      current->pc->inst->getParent()->getParent();
 
-  RealInterrupt::interrupted = true;
+  // return if the caller is this klee function
+  if (caller->getName().find("klee_overshift_check") != std::string::npos)
+    return;
 
+  // get the pending interrupt
   RealInterrupt::current_interrupt = RealInterrupt::pending_interrupts.top();
   RealInterrupt::pending_interrupts.pop();
 
-  // Get the handler name of the interrupt
+  // get the handler name of the interrupt
   llvm::StringRef function_name(RealInterrupt::current_interrupt->handlerName);
 
-  // Retrieve the LLVM Function
+  // get the corresponding LLVM Function
   Function *f_interrupt =
       RealInterrupt::executor->getKModule()->module->getFunction(function_name);
   if (f_interrupt == NULL)
@@ -240,50 +204,20 @@ ExecutionState *RealInterrupt::create_interrupt_state() {
     klee_message("[RealInterrupt] Suspending %s to execute %s ",
                  caller->getName().str().c_str(), function_name.str().c_str());
 
-  // Copy the current state
-  ExecutionState *_interrupt_state = current->branch();
-  // Check the copy
-  assert(_interrupt_state);
-
-  _interrupt_state->description = function_name;
-  RealInterrupt::current_interrupt->state = _interrupt_state;
-
-  // Save the new interrupt state
-  Inception::RealInterrupt::interrupt_state = _interrupt_state;
-  interrupt_state->addressSpace.cowKey = current->addressSpace.cowKey - 1;
-  interrupt_state->description = function_name;
-  interrupt_state->interrupted = true;
-
-  std::pair<PTree::Node *, PTree::Node *> res =
-      RealInterrupt::executor->getPTree()->split(current->ptreeNode,
-                                                 interrupt_state, current);
-
-  interrupt_state->ptreeNode = res.first;
-  current->ptreeNode = res.second;
-
+  // get the klee function
   KFunction *kf =
       RealInterrupt::executor->getKModule()->functionMap[f_interrupt];
-  uint8_t prevOpcode = interrupt_state->prevPC->inst->getOpcode();
 
-  KInstIterator restorePC;
+  // push a stack frame, saying that the caller is current->pc, see IMPORTANT
+  // NOTE for the reason
+  current->pushFrame(current->pc, kf);
 
-  switch (prevOpcode) {
-  case Instruction::Call:
-  case Instruction::Ret:
-  case Instruction::Br: {
-    restorePC = interrupt_state->prevPC;
-    interrupt_state->pushFrame(interrupt_state->prevPC, kf);
-    break;
-  }
-  default:
-    restorePC = interrupt_state->prevPC;
-    ++restorePC;
-    interrupt_state->pushFrame(interrupt_state->prevPC, kf);
-    break;
-  }
+  // finally "call" the handler by setting the pc to point to it
+  current->pc = kf->instructions;
 
-  interrupt_state->pc = kf->instructions;
-  return interrupt_state;
+  // flag to mark the interrupted state
+  // it is useful in the current version to forbid nested interrupts
+  RealInterrupt::interrupted = true;
 }
 
 void RealInterrupt::enable() { enabled = true; }
