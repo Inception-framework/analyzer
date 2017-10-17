@@ -1,6 +1,7 @@
 #include "inception/RealInterrupt.h"
 #include "../Core/Executor.h"
 #include "../Core/PTree.h"
+#include "../include/klee/Expr.h"
 #include "inception/Configurator.h"
 #include "inception/RealTarget.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
@@ -34,9 +35,13 @@ llvm::Function *RealInterrupt::caller = NULL;
 
 klee::Executor *RealInterrupt::executor = NULL;
 
+uint32_t RealInterrupt::interrupt_vector_base_addr = 0;
+
 uint32_t RealInterrupt::irq_id_base_addr = 0;
 
 bool RealInterrupt::isDeviceConnected = true;
+
+bool RealInterrupt::isDynamicInterruptTable = true;
 
 /*
  * Constructor
@@ -64,10 +69,13 @@ void RealInterrupt::init(klee::Executor *_executor) {
 
   irq_id_base_addr = Configurator::getAsInteger("Stub", "address", 0);
 
-  if (Configurator::getAsInteger("Analyzer", "Redirection", 0) == 1)
+  if (Configurator::getAsInteger("Analyzer", "Redirection", 0) == 1) {
     isDeviceConnected = true;
-  else
+    klee_message("[RealInterrupt] Forwarding option ON");
+  } else {
     isDeviceConnected = false;
+    klee_message("[RealInterrupt] Forwarding option OFF");
+  }
 
   if (isDeviceConnected) {
     // configure trace
@@ -76,6 +84,27 @@ void RealInterrupt::init(klee::Executor *_executor) {
 
     Watcher watcher = &RealInterrupt::raise;
     trace_init(Inception::RealTarget::inception_device, watcher);
+  }
+
+  // lookup in the symbol table to find the base of the interrupt vector
+  if (Configurator::getAsInteger("Analyzer", "DynamicInterruptTable", 1) == 1) {
+    isDynamicInterruptTable = true;
+    klee_message("[RealInterrupt] Dynamic interrupt table option ON");
+  } else {
+    isDynamicInterruptTable = false;
+    klee_message("[RealInterrupt] Dynamic interrupt table option OFF, using "
+                 "the static one in the configuration file");
+  }
+  Module *m = RealInterrupt::executor->getKModule()->module;
+  Inception::SymbolsTable *ST = new Inception::SymbolsTable(m);
+  Inception::SymbolInfo *Info;
+  Info = ST->lookUpVariable(".interrupt_vector");
+  if (Info == NULL) {
+    klee_warning("[RealInterrupt] .interrupt_vector not found, error if you "
+                 "are using interrupts");
+    RealInterrupt::interrupt_vector_base_addr = 0;
+  } else {
+    RealInterrupt::interrupt_vector_base_addr = Info->base;
   }
 }
 
@@ -141,7 +170,7 @@ void RealInterrupt::stop_interrupt() {
  * selecting the execution state (see Executor.cpp)
  *
  *
- * IMPORTANT NOTE
+ * INJECTING A CALL TO THE HANDLER
  * When an interrupt occurs, we want to inject an instruction in the execution
  * loop (a call to the interrupt handler)
  * Unfortunately, in klee we cannot inject an instruction, at best we can take
@@ -155,16 +184,27 @@ void RealInterrupt::stop_interrupt() {
  * Instead, if we push the frame with caller = prevPC (normal for a call), the
  * return sets pc = prevPC++. But we have modified pc to become the first
  * instruction of the handler... So basically this cannot work if prevPC is a
- * control flow instruciton that modifies pc...
+ * control flow instruction that modifies pc...
  *
+ * INTERRUPT VECTOR TABLE
+ * There are two ways to find the right handler to execute given an interrupt ID
+ * a) DynamicInterruptTable = 1 (Analyzer option in the json config file)
+ *    We call the inception_interrupt_handler( address = table[base + id * 4] ),
+ *    we read base form the .elf file, the table is allocated and initialised by
+ *    Compiler.
+ *    The inception_interrupt_handler function, created by Compiler, does 3
+ *    things:
+ *    1. save the context
+ *    2. call icp(address) (indirect call to the handler transformed into a
+ *       direct call)
+ *    3. restore the context
+ * b) DynamicInterruptTable = 0
+ *    We use the information in the json file to find the name of the handler
+ *    given the interrupt id. We can therefore directly call the handler from
+ *    here.
  *
  * CURRENT LIMITATIONS
  * 1. Interrupt nesting is not allowed
- * 2. Hanlder resolution is static, and here we directly call the handler.
- *    In the future we will call a function resolve(id) which will look in the
- *    vector table in the heap to find the address of the handler,
- *    save the context, call the proper handler with
- *    icp technique, restore the context.
  */
 void RealInterrupt::serve_pending_interrupt() {
   // Return immediately if we do not have to serve interrupts (if any of the
@@ -191,8 +231,17 @@ void RealInterrupt::serve_pending_interrupt() {
   RealInterrupt::current_interrupt = RealInterrupt::pending_interrupts.top();
   RealInterrupt::pending_interrupts.pop();
 
-  // get the handler name of the interrupt
-  llvm::StringRef function_name(RealInterrupt::current_interrupt->handlerName);
+  // get the name of the interrupt handler
+  llvm::StringRef function_name;
+  if (RealInterrupt::isDynamicInterruptTable) {
+    // in case of dynamic interrupt vector, we call a generic handler which
+    // will look into the vector and find the address of the handler
+    function_name = "inception_interrupt_handler";
+  } else {
+    // in case of static interrupt vector, we resolve the name here, thanks to
+    // the static vector described in the configuration file
+    function_name = RealInterrupt::current_interrupt->handlerName;
+  }
 
   // get the corresponding LLVM Function
   Function *f_interrupt =
@@ -211,6 +260,27 @@ void RealInterrupt::serve_pending_interrupt() {
   // push a stack frame, saying that the caller is current->pc, see IMPORTANT
   // NOTE for the reason
   current->pushFrame(current->pc, kf);
+
+  if (RealInterrupt::isDynamicInterruptTable) {
+    // the generic handler takes as parameter the address of the interrupt
+    // vector location in which to look for the handler address
+    uint32_t vector_address = RealInterrupt::interrupt_vector_base_addr +
+                              (RealInterrupt::current_interrupt->id << 2);
+    klee::ref<klee::Expr> Vector_address =
+        klee::ConstantExpr::create(vector_address, Expr::Int32);
+    klee::ref<klee::Expr> Handler_address =
+        executor->readAt(*current, Vector_address);
+
+    klee::ConstantExpr *handler_address_ce =
+        dyn_cast<klee::ConstantExpr>(Handler_address);
+    uint32_t handler_address = handler_address_ce->getZExtValue();
+
+    klee_message("resolving handler address: vector(%p) = %p", vector_address,
+                 handler_address);
+
+    Cell &argumentCell = current->stack.back().locals[kf->getArgRegister(0)];
+    argumentCell.value = Handler_address;
+  }
 
   // finally "call" the handler by setting the pc to point to it
   current->pc = kf->instructions;

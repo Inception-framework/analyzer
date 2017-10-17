@@ -133,6 +133,8 @@ public:
     return processTree;
   }
 
+  ref<Expr> readAt(ExecutionState &state, ref<Expr> address) const;
+
 private:
   static const char *TerminateReasonNames[];
 

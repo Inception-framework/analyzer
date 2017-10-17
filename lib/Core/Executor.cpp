@@ -2879,7 +2879,11 @@ void Executor::run(ExecutionState &initialState) {
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
+  // unsigned int div = 0;
   while (!states.empty() && !haltExecution) {
+    // if (div++ & 0xf)
+    //  Inception::RealInterrupt::raise(15);
+
     // select a state
     pstate = &(searcher->selectState());
 
@@ -4056,6 +4060,33 @@ void Executor::prepareForEarlyExit() {
     // Make sure stats get flushed out
     statsTracker->done();
   }
+}
+
+ref<Expr> Executor::readAt(ExecutionState &state, ref<Expr> address) const {
+
+  ObjectPair op;
+  bool success;
+
+  solver->setTimeout(coreSolverTimeout);
+
+  state.addressSpace.resolveOne(state, solver, address, op, success);
+
+  if (success) {
+
+    const MemoryObject *mo = op.first;
+
+    ref<Expr> addr = mo->getOffsetExpr(address);
+
+    const ObjectState *os = state.addressSpace.findObject(mo);
+    assert(os);
+
+    ref<Expr> result = os->read(addr, Expr::Int32);
+
+    solver->setTimeout(0);
+
+    return result;
+  } else
+    return klee::ConstantExpr::create(-1, Expr::Int32);
 }
 ///
 

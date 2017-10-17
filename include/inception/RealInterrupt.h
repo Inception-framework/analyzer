@@ -95,6 +95,8 @@ public:
   static void serve_pending_interrupt();
 
 private:
+  static uint32_t interrupt_vector_base_addr;
+
   static uint32_t irq_id_base_addr;
 
   static uint32_t stub_ack_address;
@@ -106,6 +108,8 @@ private:
       pending_interrupts;
 
   static bool isDeviceConnected;
+
+  static bool isDynamicInterruptTable;
 };
 } // namespace Inception
 #endif
