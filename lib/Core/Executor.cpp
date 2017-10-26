@@ -702,12 +702,17 @@ void Executor::initializeGlobals(ExecutionState &state) {
         Info = new Inception::SymbolInfo(v->getName(), address, size, false, false);
       } else {
         Info = ST->lookUpVariable(i->getName());
-        if(Info == NULL || Info->size == 0)
+        if (Info == NULL) // || Info->size == 0)
+          // the only section will be .stack
           Info = ST->lookUpSection(i->getName());
+        else
+          Info->size = size;
       }
 
       MemoryObject *mo;
       if(Info == NULL) {
+        klee_warning("unresolved symbol: %s, allocating at a host address",
+                     i->getName().data());
         mo = memory->allocate(size, /*isLocal=*/false,
           /*isGlobal=*/true, /*allocSite=*/v,
           /*alignment=*/globalObjectAlignment);
