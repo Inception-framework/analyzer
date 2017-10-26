@@ -3508,8 +3508,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   Expr::Width type = (isWrite ? value->getWidth() :
                      getWidthForLLVMType(target->inst->getType()));
 
-  ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-  uint64_t concrete_address = address_ce->getZExtValue();
   uint64_t concrete_value = 0;
 
   unsigned bytes = Expr::getMinBytesForWidth(type);
@@ -3535,6 +3533,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = op.first;
 
     if(mo->isExternalized && isWrite && !mo->isSymbolic) {
+
       ConstantExpr *value_ce = dyn_cast<ConstantExpr>(value);
       concrete_value = value_ce->getZExtValue();
     }
@@ -3565,6 +3564,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           if(mo->isSymbolic)
             return;
 
+          ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+          uint64_t concrete_address = address_ce->getZExtValue();
+
           Inception::RealTarget::write(concrete_address, concrete_value, type);
           return;
         }
@@ -3579,8 +3581,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       } else {
 
         if(mo->isExternalized) {
-          uint64_t concrete_value = 0;
-
           ref<Expr> result = os->read(offset, type);
 
           if(mo->isSymbolic) {
@@ -3590,6 +3590,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                            Expr::getMinBytesForWidth(result->getWidth()));
             result = Expr::createTempRead(array, result->getWidth());
           } else {
+            ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+            uint64_t concrete_address = address_ce->getZExtValue();
+
             result = Inception::RealTarget::read(concrete_address,
               &concrete_value, type);
             // printf("Acces to value at %lx ! \n", concrete_address);
