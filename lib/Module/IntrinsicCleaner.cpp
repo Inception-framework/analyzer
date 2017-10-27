@@ -88,6 +88,9 @@ static unsigned resolveIntrinsicID(Function* called) {
   //   break;
   case 'u':
     if (called->getName().find("llvm.uadd.with.overflow.i32") != std::string::npos)     return Intrinsic::uadd_with_overflow;
+    if (called->getName().find("llvm.umul.with.overflow.i32") !=
+        std::string::npos)
+      return Intrinsic::umul_with_overflow;
   case 'd':
     // if (called->getName().find("llvm.dbg.stoppoint") != std::string::npos)   return Intrinsic::dbg_stoppoint;
     // if (called->getName().find("llvm.dbg.region.start") != std::string::npos)return Intrinsic::dbg_region_start;
