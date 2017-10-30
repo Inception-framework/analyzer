@@ -57,6 +57,11 @@ extern "C" {
    */
   void enable_irq();
 
+  /*
+   * Stop IRQ : call RealInterrupt stop_interrupt()
+   */
+  void stop_irq();
+
   /* Add an accesible memory object at a user specified location. It
    * is the users responsibility to make sure that these memory
    * objects do not overlap. These memory objects will also
