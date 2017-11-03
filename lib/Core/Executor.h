@@ -135,6 +135,9 @@ public:
 
   ref<Expr> readAt(ExecutionState &state, ref<Expr> address) const;
 
+  ref<Expr> writeAt(ExecutionState &state, ref<Expr> address,
+                    ref<Expr> value) const;
+
 private:
   static const char *TerminateReasonNames[];
 

@@ -67,6 +67,16 @@ extern "C" {
    */
   void raise_irq(int id);
 
+  /*
+   * Write BASEPRI
+   */
+  void inception_write_basepri(uint32_t basepri);
+
+  /*
+   * Write BASEPRI
+   */
+  void inception_read_basepri(uint32_t *basepri_ptr);
+
   /* Add an accesible memory object at a user specified location. It
    * is the users responsibility to make sure that these memory
    * objects do not overlap. These memory objects will also

@@ -157,6 +157,9 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("stop_irq", handleStopIRQ, true),
     add("raise_irq", handleRaiseIRQ, true),
 
+    add("inception_write_basepri", handleWriteBasepri, true),
+    add("inception_read_basepri", handleReadBasepri, true),
+
     add("inception_sv_call", handleSVCall, true),
 
 #undef addDNR
@@ -838,6 +841,18 @@ void SpecialFunctionHandler::handleRaiseIRQ(
     std::vector<ref<Expr> > &arguments) {
   Inception::RealInterrupt::raise(
       cast<ConstantExpr>(arguments[0])->getZExtValue());
+}
+
+void SpecialFunctionHandler::handleWriteBasepri(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  Inception::RealInterrupt::write_basepri(arguments[0]);
+}
+
+void SpecialFunctionHandler::handleReadBasepri(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  Inception::RealInterrupt::read_basepri(arguments[0]);
 }
 
 void SpecialFunctionHandler::handleEnableTraceInstructions(ExecutionState &state,

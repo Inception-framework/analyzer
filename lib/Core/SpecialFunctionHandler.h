@@ -148,6 +148,8 @@ namespace klee {
     HANDLER(handleEnableMemTrace);
     HANDLER(handleDisableMemTrace);
     HANDLER(handleSVCall);
+    HANDLER(handleWriteBasepri);
+    HANDLER(handleReadBasepri);
 
 #undef HANDLER
   };

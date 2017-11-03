@@ -94,6 +94,10 @@ public:
 
   static void serve_pending_interrupt();
 
+  static void write_basepri(klee::ref<klee::Expr> basepri);
+
+  static void read_basepri(klee::ref<klee::Expr> basepri_ptr);
+
 private:
   static uint32_t interrupt_vector_base_addr;
 

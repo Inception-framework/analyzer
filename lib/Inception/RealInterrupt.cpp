@@ -304,4 +304,32 @@ void RealInterrupt::enable() { enabled = true; }
 
 void RealInterrupt::disable() { enabled = false; }
 
+void RealInterrupt::write_basepri(klee::ref<klee::Expr> basepri) {
+  if (isDeviceConnected) {
+    jtag_halt(RealTarget::inception_device);
+    uint32_t old_20 = jtag_read_reg(RealTarget::inception_device, 20);
+    uint32_t new_20 = dyn_cast<klee::ConstantExpr>(basepri)->getZExtValue();
+    klee_message("[write_basepri] writing %p to basepri\n", new_20);
+    new_20 = ((new_20 & 0xff) << 8) | (old_20 & ~0xff00);
+    jtag_write_reg(RealTarget::inception_device, 20, new_20);
+    jtag_resume(RealTarget::inception_device);
+  }
+}
+
+void RealInterrupt::read_basepri(klee::ref<klee::Expr> basepri_ptr) {
+  if (isDeviceConnected) {
+    jtag_halt(RealTarget::inception_device);
+    uint32_t basepri = jtag_read_reg(RealTarget::inception_device, 20);
+    basepri = basepri >> 8;
+    basepri &= 0xff;
+    klee_message("[read_basepri] reading %p from reg 20\n", basepri);
+    jtag_resume(RealTarget::inception_device);
+    klee::ref<klee::Expr> Basepri =
+        klee::ConstantExpr::create(basepri, Expr::Int32);
+
+    ExecutionState *current = RealInterrupt::executor->getExecutionState();
+    executor->writeAt(*current, basepri_ptr, Basepri);
+  }
+}
+
 } // namespace Inception

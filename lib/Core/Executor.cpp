@@ -4126,6 +4126,36 @@ ref<Expr> Executor::readAt(ExecutionState &state, ref<Expr> address) const {
   } else
     return klee::ConstantExpr::create(-1, Expr::Int32);
 }
+
+ref<Expr> Executor::writeAt(ExecutionState &state, ref<Expr> address,
+                            ref<Expr> value) const {
+
+  ObjectPair op;
+  bool success;
+
+  solver->setTimeout(coreSolverTimeout);
+
+  state.addressSpace.resolveOne(state, solver, address, op, success);
+
+  if (success) {
+
+    const MemoryObject *mo = op.first;
+
+    ref<Expr> addr = mo->getOffsetExpr(address);
+
+    const ObjectState *os = state.addressSpace.findObject(mo);
+    assert(os);
+
+    ObjectState *wos = state.addressSpace.getWriteable(mo, os);
+    wos->write(addr, value);
+
+    solver->setTimeout(0);
+
+    return klee::ConstantExpr::create(0, Expr::Int32);
+  } else
+    return klee::ConstantExpr::create(-1, Expr::Int32);
+}
+
 ///
 
 Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opts,
