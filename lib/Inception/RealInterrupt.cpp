@@ -106,6 +106,16 @@ void RealInterrupt::init(klee::Executor *_executor) {
   } else {
     RealInterrupt::interrupt_vector_base_addr = Info->base;
   }
+
+  // HACK: eat interrupts that may still be in the buffer of the fpga due to
+  // wrong
+  // reset and that arrived here at the very beginning of the initialization.
+  // This is a trick, of course it would be better to add a proper reset to all
+  // boards.
+  while (!RealInterrupt::pending_interrupts.empty()) {
+    klee_warning("[RealInterrupt::init] eating old interrupts in the buffer");
+    RealInterrupt::pending_interrupts.pop();
+  }
 }
 
 /*

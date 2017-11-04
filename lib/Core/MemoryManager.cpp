@@ -142,6 +142,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
   if (!address)
     return 0;
 
+
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
                                        allocSite, this);
