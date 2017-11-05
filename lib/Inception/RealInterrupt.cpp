@@ -322,7 +322,7 @@ void RealInterrupt::read_basepri(klee::ref<klee::Expr> basepri_ptr) {
     uint32_t basepri = jtag_read_reg(RealTarget::inception_device, 20);
     basepri = basepri >> 8;
     basepri &= 0xff;
-    klee_message("[read_basepri] reading %p from reg 20\n", basepri);
+    klee_message("[read_basepri] reading %p from basepri\n", basepri);
     jtag_resume(RealTarget::inception_device);
     klee::ref<klee::Expr> Basepri =
         klee::ConstantExpr::create(basepri, Expr::Int32);
