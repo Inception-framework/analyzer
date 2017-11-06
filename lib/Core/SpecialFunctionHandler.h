@@ -143,6 +143,7 @@ namespace klee {
     HANDLER(handleDisableIRQ);
     HANDLER(handleStopIRQ);
     HANDLER(handleRaiseIRQ);
+    HANDLER(handleIsIRQ);
     HANDLER(handleEnableTraceInstructions);
     HANDLER(handleDisableTraceInstructions);
     HANDLER(handleEnableMemTrace);

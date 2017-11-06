@@ -92,6 +92,8 @@ public:
 
   static void enable();
 
+  static void is_irq(klee::ref<klee::Expr> interrupted_ptr);
+
   static void serve_pending_interrupt();
 
   static void write_basepri(klee::ref<klee::Expr> basepri);

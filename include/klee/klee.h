@@ -68,6 +68,11 @@ extern "C" {
   void raise_irq(int id);
 
   /*
+   * Is IRQ : returns RealInterrupt::interrupted ? current irq id : 0
+   */
+  void is_irq(int *interrupted);
+
+  /*
    * Write BASEPRI
    */
   void inception_write_basepri(uint32_t basepri);

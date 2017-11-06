@@ -332,4 +332,18 @@ void RealInterrupt::read_basepri(klee::ref<klee::Expr> basepri_ptr) {
   }
 }
 
+void RealInterrupt::is_irq(klee::ref<klee::Expr> interrupted_ptr) {
+  if (isDeviceConnected) {
+    int ret = 0;
+    if (RealInterrupt::interrupted) {
+      ret = RealInterrupt::current_interrupt->id;
+    }
+    klee::ref<klee::Expr> Interrupted =
+        klee::ConstantExpr::create(ret, Expr::Int32);
+
+    ExecutionState *current = RealInterrupt::executor->getExecutionState();
+    executor->writeAt(*current, interrupted_ptr, Interrupted);
+  }
+}
+
 } // namespace Inception
