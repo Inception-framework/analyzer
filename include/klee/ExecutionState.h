@@ -17,6 +17,7 @@
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
 #include "klee/Internal/Module/KInstIterator.h"
+#include "inception/StackManager.h"
 
 #include <map>
 #include <set>
@@ -93,7 +94,8 @@ public:
   KInstIterator prevPC;
 
   /// @brief Stack representing the current instruction stream
-  stack_ty stack;
+  // stack_ty stack;
+  Inception::StackManager stack;
 
   /// @brief Remember from which Basic Block control flow arrived
   /// (i.e. to select the right phi values)
