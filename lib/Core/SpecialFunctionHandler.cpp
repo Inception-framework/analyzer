@@ -154,9 +154,9 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 
     add("disable_irq", handleDisableIRQ, true),
     add("enable_irq", handleEnableIRQ, true),
-    add("stop_irq", handleStopIRQ, true),
-    add("raise_irq", handleRaiseIRQ, true),
-    add("is_irq", handleIsIRQ, true),
+    add("inception_stop_irq", handleStopIRQ, true),
+    add("inception_raise_irq", handleRaiseIRQ, true),
+    add("inception_is_irq", handleIsIRQ, true),
 
     add("inception_write_basepri", handleWriteBasepri, true),
     add("inception_read_basepri", handleReadBasepri, true),

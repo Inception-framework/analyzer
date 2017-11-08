@@ -233,8 +233,10 @@ void RealInterrupt::serve_pending_interrupt() {
   Inception::RealInterrupt::caller =
       current->pc->inst->getParent()->getParent();
 
-  // return if the caller is this klee function
-  if (caller->getName().find("klee_overshift_check") != std::string::npos)
+  // return if the caller is one klee or inception function that should be
+  // atomic
+  if (caller->getName().find("klee_") != std::string::npos ||
+      caller->getName().find("inception_") != std::string::npos)
     return;
 
   // get the pending interrupt

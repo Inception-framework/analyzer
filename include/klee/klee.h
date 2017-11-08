@@ -60,17 +60,17 @@ extern "C" {
   /*
    * Stop IRQ : call RealInterrupt stop_interrupt()
    */
-  void stop_irq();
+  void inception_stop_irq();
 
   /*
    * Raise IRQ : call RealInterrupt raise(int id)
    */
-  void raise_irq(int id);
+  void inception_raise_irq(int id);
 
   /*
    * Is IRQ : returns RealInterrupt::interrupted ? current irq id : 0
    */
-  void is_irq(int *interrupted);
+  void inception_is_irq(int *interrupted);
 
   /*
    * Write BASEPRI
