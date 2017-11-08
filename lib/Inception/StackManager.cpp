@@ -26,9 +26,9 @@ void StackManager::push_back(klee::StackFrame sf) {
     stack.push_back(sf);
 
     threads.insert(std::pair<uint64_t,stack_ty>(SelectedThreadID, stack));
+  } else {
+    threads.find(SelectedThreadID)->second.push_back(sf);
   }
-
-  return threads.find(SelectedThreadID)->second.push_back(sf);
 }
 
 /*
