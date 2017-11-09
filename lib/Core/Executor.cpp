@@ -1657,14 +1657,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         klee_warning("[Return from interrupt] switching to thread_id = %p", pc);
 
         // Get the function
-        llvm::StringRef function_name = "th1"; // TODO get using pc and ST
         Function *ret_func = device_to_host_map.find(pc)->second;
         if (ret_func == NULL)
           klee_error("[Return from interrupt] Fail to resolve name %s",
-                     function_name.str().c_str());
+                     ret_func->getName().str().c_str());
         else
           klee_warning("[Return from interrupt] Return pc resolved to %s ",
-                       function_name.str().c_str());
+                       ret_func->getName().str().c_str());
 
         KFunction *kf = kmodule->functionMap[ret_func];
 
