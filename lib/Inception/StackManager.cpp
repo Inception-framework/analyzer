@@ -4,7 +4,7 @@
 
 namespace Inception {
 
-StackManager::StackManager(): SelectedThreadID(0xFFFFFFFF) {}
+StackManager::StackManager() : SelectedThreadID(0xFFFFFFFF) {}
 
 StackManager::~StackManager() {}
 
@@ -20,14 +20,14 @@ klee::StackFrame &StackManager::back() {
  * Return last pushed StackFrame of current Thread
  */
 void StackManager::push_back(klee::StackFrame sf) {
-
-  if(threads.empty()) {
+  std::map<uint64_t, stack_ty>::iterator it = threads.find(SelectedThreadID);
+  if (it == threads.end()) {
     stack_ty stack;
     stack.push_back(sf);
 
     threads.insert(std::pair<uint64_t,stack_ty>(SelectedThreadID, stack));
   } else {
-    threads.find(SelectedThreadID)->second.push_back(sf);
+    it->second.push_back(sf);
   }
 }
 
