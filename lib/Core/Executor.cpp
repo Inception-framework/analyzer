@@ -1651,8 +1651,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         interrupted = true;
 
         // Read the return address popped by the handler
-        int pc_ptr = Inception::Monitor::followed.find("PC")->second;
-        ref<ConstantExpr> PC = ConstantExpr::create(pc_ptr, Expr::Int32);
+        ref<Expr> PC = getPCAddress();
         int pc = dyn_cast<ConstantExpr>(readAt(state, PC))->getZExtValue();
         klee_warning("[Return from interrupt] switching to thread_id = %p", pc);
 
@@ -4205,6 +4204,16 @@ ref<Expr> Executor::writeAt(ExecutionState &state, ref<Expr> address,
     return klee::ConstantExpr::create(0, Expr::Int32);
   } else
     return klee::ConstantExpr::create(-1, Expr::Int32);
+}
+
+ref<Expr> Executor::getFuncAddress(const llvm::GlobalValue *f) const {
+  return globalAddresses.find(f)->second;
+}
+
+ref<Expr> Executor::getPCAddress() const {
+  int pc_ptr = Inception::Monitor::followed.find("PC")->second;
+  ref<ConstantExpr> PC = klee::ConstantExpr::create(pc_ptr, Expr::Int32);
+  return PC;
 }
 
 ///

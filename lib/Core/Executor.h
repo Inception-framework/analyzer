@@ -141,6 +141,10 @@ public:
   ref<Expr> writeAt(ExecutionState &state, ref<Expr> address,
                     ref<Expr> value) const;
 
+  ref<Expr> getFuncAddress(const llvm::GlobalValue *) const;
+
+  ref<Expr> getPCAddress() const;
+
 private:
   static const char *TerminateReasonNames[];
 

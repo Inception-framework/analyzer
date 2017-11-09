@@ -239,6 +239,14 @@ void RealInterrupt::serve_pending_interrupt() {
       caller->getName().find("inception_") != std::string::npos)
     return;
 
+  // find the pc and update the PC reg
+  klee::ref<klee::Expr> PC = executor->getPCAddress();
+  klee::ref<klee::Expr> Addr =
+      executor->getFuncAddress(Inception::RealInterrupt::caller);
+  klee_warning("[RealInterrupt] updating pc to %p",
+               dyn_cast<klee::ConstantExpr>(Addr)->getZExtValue());
+  executor->writeAt(*current, PC, Addr);
+
   // get the pending interrupt
   RealInterrupt::current_interrupt = RealInterrupt::pending_interrupts.top();
   RealInterrupt::pending_interrupts.pop();
