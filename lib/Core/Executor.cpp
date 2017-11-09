@@ -3824,6 +3824,17 @@ void Executor::runFunctionAsMain(Function *f,
 
   ExecutionState *state = new ExecutionState(kmodule->functionMap[f]);
 
+  // init first thread id to the address of main
+  Inception::SymbolsTable *ST = new Inception::SymbolsTable(kmodule->module);
+  Inception::SymbolInfo *Info = ST->lookUpVariable(f->getName());
+  int main_address;
+  if (Info == NULL) {
+  } else {
+    main_address = Info->base;
+  }
+  state->stack.switchContext(main_address);
+  state->pushFrame(0, kmodule->functionMap[f]);
+
   if (pathWriter)
     state->pathOS = pathWriter->open();
   if (symPathWriter)
