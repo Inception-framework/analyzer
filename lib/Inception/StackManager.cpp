@@ -59,6 +59,10 @@ klee::StackFrame StackManager::at(int i) {
  * True if current Thread has no StackFrame
  */
 bool StackManager::empty() {
+  std::map<uint64_t, stack_ty>::iterator it = threads.find(SelectedThreadID);
+  if (it == threads.end()) {
+    return true;
+  }
 
   return threads.find(SelectedThreadID)->second.empty();
 }
