@@ -1649,6 +1649,37 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // llvm::errs() << " Expected from  " << Inception::RealInterrupt::caller->getName() << "\n";
       if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
         interrupted = true;
+
+        // Read the return address popped by the handler
+        int pc_ptr = Inception::Monitor::followed.find("PC")->second;
+        ref<ConstantExpr> PC = ConstantExpr::create(pc_ptr, Expr::Int32);
+        int pc = dyn_cast<ConstantExpr>(readAt(state, PC))->getZExtValue();
+        klee_warning("[Return from interrupt] switching to thread_id = %p", pc);
+
+        // Get the function
+        llvm::StringRef function_name = "th1"; // TODO get using pc and ST
+        Function *ret_func = device_to_host_map.find(pc)->second;
+        if (ret_func == NULL)
+          klee_error("[Return from interrupt] Fail to resolve name %s",
+                     function_name.str().c_str());
+        else
+          klee_warning("[Return from interrupt] Return pc resolved to %s ",
+                       function_name.str().c_str());
+
+        KFunction *kf = kmodule->functionMap[ret_func];
+
+        // switch context
+        state.stack.switchContext(pc);
+        if (state.stack.empty()) {
+          klee_warning("[Return from interrupt] first return to %p, setting "
+                       "initial stack frame first",
+                       pc);
+          state.pushFrame(0, kf);
+          state.pushFrame(kf->instructions, kf);
+          kcaller = kf->instructions;
+          caller = kcaller ? kcaller->inst : 0;
+        }
+
         Inception::RealInterrupt::stop_interrupt();
       }
     }
