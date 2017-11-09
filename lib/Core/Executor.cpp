@@ -1648,6 +1648,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // llvm::errs() << " Return from  " << caller->getParent()->getParent()->getName() << "\n";
       // llvm::errs() << " Expected from  " << Inception::RealInterrupt::caller->getName() << "\n";
       if(caller->getParent()->getParent() == Inception::RealInterrupt::caller) {
+        klee_warning("[Return from interrupt]");
         interrupted = true;
 
         // Read the return address popped by the handler
@@ -1661,7 +1662,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
             pc);
 
         // if it is different from the pushed one, switch context
-        if (pc != prevPc) {
+        if (pc != prevPc && pc != 0) {
           Function *ret_func = device_to_host_map.find(pc)->second;
           if (ret_func == NULL)
             klee_error("[Return from interrupt] Fail to resolve name %s",
@@ -4219,6 +4220,7 @@ ref<Expr> Executor::getFuncAddress(const llvm::GlobalValue *f) const {
 
 ref<Expr> Executor::getPCAddress() const {
   uint32_t pc_ptr = Inception::Monitor::followed.find("PC")->second;
+  klee_warning("[getPCAddress] &PC = %p", pc_ptr);
   ref<ConstantExpr> PC = klee::ConstantExpr::create(pc_ptr, Expr::Int32);
   return PC;
 }

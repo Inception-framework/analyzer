@@ -67,6 +67,7 @@ void Monitor::follow(const llvm::GlobalVariable *i, uint64_t address) {
       return;
 
     // klee_warning("Monitor is watching one register more...");
+    klee_message("[Monitor] adding %s %p", i->getName().str().c_str(), address);
 
   } catch (const std::out_of_range &oor) {
   }

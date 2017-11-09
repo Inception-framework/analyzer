@@ -248,7 +248,7 @@ void RealInterrupt::serve_pending_interrupt() {
   klee_warning("[RealInterrupt] updating pc to %p",
                dyn_cast<klee::ConstantExpr>(RealInterrupt::CallerAddress)
                    ->getZExtValue());
-  executor->writeAt(*current, PC, RealInterrupt::CallerAddress);
+  // executor->writeAt(*current, PC, RealInterrupt::CallerAddress);
 
   // get the pending interrupt
   RealInterrupt::current_interrupt = RealInterrupt::pending_interrupts.top();
