@@ -82,6 +82,10 @@ public:
 
   void switchContext(int new_id) { SelectedThreadID = new_id; }
 
+  void setMainThreadID(int main_id) { MainThreadID = main_id; }
+
+  bool isMainThreadID(void) { return SelectedThreadID == MainThreadID; }
+
 private:
   /*
    * This data structure maps addresses (keys) to a list of StackFrames.
@@ -94,6 +98,7 @@ private:
    * This is the current Thread index
    */
   unsigned SelectedThreadID;
+  unsigned MainThreadID;
 };
 
 } // namespace Inception

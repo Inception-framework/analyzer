@@ -1693,6 +1693,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
+      // if we are in the main: ok
+      // else if we are in a thread, we should return to who called us
+      // but this is unsupported (because our threads are infinite loops)
+      // so let's show a warning.
+      if (!state.stack.isMainThreadID()) {
+        klee_warning("[Warning] Returning from a thread different than main is "
+                     "not supported => exiting here");
+      }
+
       terminateStateOnExit(state);
     } else {
       state.popFrame();
@@ -3864,6 +3873,7 @@ void Executor::runFunctionAsMain(Function *f,
     main_address = Info->base;
   }
   state->stack.switchContext(main_address);
+  state->stack.setMainThreadID(main_address);
   state->pushFrame(0, kmodule->functionMap[f]);
 
   if (pathWriter)
