@@ -432,6 +432,8 @@ const Module *Executor::setModule(llvm::Module *module,
   // Inception::RealMemory::init(module);
   Inception::Monitor::init(this);
 
+  ST = new Inception::SymbolsTable(module);
+
   // Initialize the context.
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   TargetData *TD = kmodule->targetData;
@@ -549,8 +551,6 @@ extern void *__dso_handle __attribute__ ((__weak__));
 
 void Executor::initializeGlobals(ExecutionState &state) {
   Module *m = kmodule->module;
-
-  Inception::SymbolsTable* ST = new Inception::SymbolsTable(m);
 
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
@@ -3865,10 +3865,10 @@ void Executor::runFunctionAsMain(Function *f,
   ExecutionState *state = new ExecutionState(kmodule->functionMap[f]);
 
   // init first thread id to the address of main
-  Inception::SymbolsTable *ST = new Inception::SymbolsTable(kmodule->module);
   Inception::SymbolInfo *Info = ST->lookUpVariable(f->getName());
-  int main_address;
+  int main_address = 0;
   if (Info == NULL) {
+    klee_error("Failed to find main address in the Symbol Table...");
   } else {
     main_address = Info->base;
   }

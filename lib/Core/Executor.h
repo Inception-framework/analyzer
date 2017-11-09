@@ -22,6 +22,7 @@
 #include "klee/Internal/Module/KModule.h"
 #include "klee/util/ArrayCache.h"
 #include "llvm/Support/raw_ostream.h"
+#include "inception/SymbolsTable.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -99,6 +100,8 @@ public:
     /// The event callback.
     virtual void run() = 0;
   };
+
+  Inception::SymbolsTable *ST;
 
   /// Get textual information regarding a memory address.
   std::string getAddressInfo(ExecutionState &state, ref<Expr> address,
