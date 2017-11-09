@@ -1653,31 +1653,38 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // Read the return address popped by the handler
         ref<Expr> PC = getPCAddress();
         int pc = dyn_cast<ConstantExpr>(readAt(state, PC))->getZExtValue();
-        klee_warning("[Return from interrupt] switching to thread_id = %p", pc);
+        int prevPc =
+            dyn_cast<ConstantExpr>(Inception::RealInterrupt::CallerAddress)
+                ->getZExtValue();
+        klee_warning(
+            "[Return from interrupt] switching from thread_id %p to %p", prevPc,
+            pc);
 
-        // Get the function
-        Function *ret_func = device_to_host_map.find(pc)->second;
-        if (ret_func == NULL)
-          klee_error("[Return from interrupt] Fail to resolve name %s",
-                     ret_func->getName().str().c_str());
-        else
-          klee_warning("[Return from interrupt] Return pc resolved to %s ",
+        // if it is different from the pushed one, switch context
+        if (pc != prevPc) {
+          Function *ret_func = device_to_host_map.find(pc)->second;
+          if (ret_func == NULL)
+            klee_error("[Return from interrupt] Fail to resolve name %s",
                        ret_func->getName().str().c_str());
+          else
+            klee_warning("[Return from interrupt] Return pc resolved to %s ",
+                         ret_func->getName().str().c_str());
 
-        KFunction *kf = kmodule->functionMap[ret_func];
+          KFunction *kf = kmodule->functionMap[ret_func];
 
-        // switch context
-        state.stack.switchContext(pc);
-        if (state.stack.empty()) {
-          klee_warning("[Return from interrupt] first return to %p, setting "
-                       "initial stack frame first",
-                       pc);
-          state.pushFrame(0, kf);
-          state.pushFrame(kf->instructions, kf);
-          kcaller = kf->instructions;
-          caller = kcaller ? kcaller->inst : 0;
+          state.stack.switchContext(pc);
+          if (state.stack.empty()) {
+            klee_warning("[Return from interrupt] first return to %p, setting "
+                         "initial stack frame first",
+                         pc);
+            state.pushFrame(0, kf);
+            state.pushFrame(kf->instructions, kf);
+            kcaller = kf->instructions;
+            caller = kcaller ? kcaller->inst : 0;
+          }
         }
 
+        // exit the interrupted state
         Inception::RealInterrupt::stop_interrupt();
       }
     }
@@ -4211,7 +4218,7 @@ ref<Expr> Executor::getFuncAddress(const llvm::GlobalValue *f) const {
 }
 
 ref<Expr> Executor::getPCAddress() const {
-  int pc_ptr = Inception::Monitor::followed.find("PC")->second;
+  uint32_t pc_ptr = Inception::Monitor::followed.find("PC")->second;
   ref<ConstantExpr> PC = klee::ConstantExpr::create(pc_ptr, Expr::Int32);
   return PC;
 }
