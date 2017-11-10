@@ -1675,10 +1675,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                          pc);
             state.pushFrame(0, kf);
             state.pushFrame(kf->instructions, kf);
-            kcaller = kf->instructions;
-            caller = kcaller ? kcaller->inst : 0;
           }
+          kcaller = state.stack.back().caller;
+          caller = kcaller ? kcaller->inst : 0;
         }
+        // caller->dump();
 
         // exit the interrupted state
         Inception::RealInterrupt::stop_interrupt();
