@@ -719,6 +719,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
       else {
 
+        //FIXME: When the address is 0, ST return 0xFFFFFFFFFFFFFFFF
+        if(Info->base > 0xFFFFFFFF)
+          Info->base = 0;
+
         klee_message("Memory Object %s at 0x%lx of size 0x%lx",
           i->getName().str().c_str(),Info->base, size);
 
