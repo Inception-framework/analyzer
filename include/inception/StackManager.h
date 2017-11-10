@@ -84,6 +84,8 @@ public:
 
   void setMainThreadID(int main_id) { MainThreadID = main_id; }
 
+  int getSelectedThreadID(void) { return SelectedThreadID; }
+
   bool isMainThreadID(void) { return SelectedThreadID == MainThreadID; }
 
 private:

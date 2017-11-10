@@ -82,8 +82,6 @@ public:
 
   static llvm::Function *caller;
 
-  static klee::ref<klee::Expr> CallerAddress;
-
   static Interrupt *current_interrupt;
 
   static klee::Executor *executor;

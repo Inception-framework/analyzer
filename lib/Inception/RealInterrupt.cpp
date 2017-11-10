@@ -33,8 +33,6 @@ bool RealInterrupt::interrupted = false;
 
 llvm::Function *RealInterrupt::caller = NULL;
 
-klee::ref<klee::Expr> RealInterrupt::CallerAddress;
-
 klee::Executor *RealInterrupt::executor = NULL;
 
 uint32_t RealInterrupt::interrupt_vector_base_addr = 0;
@@ -243,12 +241,11 @@ void RealInterrupt::serve_pending_interrupt() {
 
   // find the pc and update the PC reg
   klee::ref<klee::Expr> PC = executor->getPCAddress();
-  RealInterrupt::CallerAddress =
-      executor->getFuncAddress(RealInterrupt::caller);
-  klee_warning("[RealInterrupt] updating pc to %p",
-               dyn_cast<klee::ConstantExpr>(RealInterrupt::CallerAddress)
-                   ->getZExtValue());
-  // executor->writeAt(*current, PC, RealInterrupt::CallerAddress);
+  int current_id = current->stack.getSelectedThreadID();
+  klee_warning("[RealInterrupt] updating pc to current id %p", current_id);
+  klee::ref<klee::Expr> ID =
+      klee::ConstantExpr::create(current_id, Expr::Int32);
+  executor->writeAt(*current, PC, ID);
 
   // get the pending interrupt
   RealInterrupt::current_interrupt = RealInterrupt::pending_interrupts.top();
