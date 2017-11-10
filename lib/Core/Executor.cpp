@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #define INCEPTION_DEBUG 1
+//#define INCEPTION_DEBUG 1
 
 #include "Executor.h"
 #include "Context.h"
@@ -1654,28 +1654,30 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // Read the return address popped by the handler
         ref<Expr> PC = getPCAddress();
         int pc = dyn_cast<ConstantExpr>(readAt(state, PC))->getZExtValue();
-        klee_warning("[Return from interrupt] switching to thread_id %p", pc);
 
         // if it is different from the pushed one, switch context
-        Function *ret_func = device_to_host_map.find(pc)->second;
-        if (ret_func == NULL)
-          klee_error("[Return from interrupt] Fail to resolve name %s",
-                     ret_func->getName().str().c_str());
-        else
-          klee_warning("[Return from interrupt] Return pc resolved to %s ",
+        if (pc != state.stack.getSelectedThreadID()) {
+          klee_warning("[Return from interrupt] switching to thread_id %p", pc);
+          Function *ret_func = device_to_host_map.find(pc)->second;
+          if (ret_func == NULL)
+            klee_error("[Return from interrupt] Fail to resolve name %s",
                        ret_func->getName().str().c_str());
+          else
+            klee_warning("[Return from interrupt] Return pc resolved to %s ",
+                         ret_func->getName().str().c_str());
 
-        KFunction *kf = kmodule->functionMap[ret_func];
+          KFunction *kf = kmodule->functionMap[ret_func];
 
-        state.stack.switchContext(pc);
-        if (state.stack.empty()) {
-          klee_warning("[Return from interrupt] first return to %p, setting "
-                       "initial stack frame first",
-                       pc);
-          state.pushFrame(0, kf);
-          state.pushFrame(kf->instructions, kf);
-          kcaller = kf->instructions;
-          caller = kcaller ? kcaller->inst : 0;
+          state.stack.switchContext(pc);
+          if (state.stack.empty()) {
+            klee_warning("[Return from interrupt] first return to %p, setting "
+                         "initial stack frame first",
+                         pc);
+            state.pushFrame(0, kf);
+            state.pushFrame(kf->instructions, kf);
+            kcaller = kf->instructions;
+            caller = kcaller ? kcaller->inst : 0;
+          }
         }
 
         // exit the interrupted state
