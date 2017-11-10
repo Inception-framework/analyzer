@@ -1674,6 +1674,18 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                          "initial stack frame first",
                          pc);
             state.pushFrame(0, kf);
+
+            // pass the argument if necessary
+            // for now we support only a void const *argument
+            // required by FreeRTOS
+            // TODO do it for frame 0!
+            Cell &argumentCell =
+                state.stack.back().locals[kf->getArgRegister(0)];
+            uint32_t r0_ptr = Inception::Monitor::followed.find("R0")->second;
+            ref<ConstantExpr> R0 =
+                klee::ConstantExpr::create(r0_ptr, Expr::Int32);
+            argumentCell.value = readAt(state, R0);
+
             state.pushFrame(kf->instructions, kf);
           }
           kcaller = state.stack.back().caller;
