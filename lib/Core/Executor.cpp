@@ -3882,7 +3882,7 @@ void Executor::runFunctionAsMain(Function *f,
   Inception::SymbolInfo *Info = ST->lookUpVariable(f->getName());
   int main_address = 0;
   if (Info == NULL) {
-    klee_error("Failed to find main address in the Symbol Table...");
+    klee_warning("Failed to find main address in the Symbol Table...");
   } else {
     main_address = Info->base;
   }
