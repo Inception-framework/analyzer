@@ -562,7 +562,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // object. given that we use malloc to allocate memory in states this also
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
-  uint32_t device_address;
+  uint64_t device_address;
   for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
     Function *f = static_cast<Function *>(i);
     ref<ConstantExpr> addr(0);
@@ -579,6 +579,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       Inception::SymbolInfo *Info;
       Info = ST->lookUpVariable(f->getName());
       if (Info == NULL) {
+        device_address = (unsigned long) (void*) f;
       } else {
         device_address = Info->base;
       }
@@ -716,27 +717,42 @@ void Executor::initializeGlobals(ExecutionState &state) {
         mo = memory->allocate(size, /*isLocal=*/false,
           /*isGlobal=*/true, /*allocSite=*/v,
           /*alignment=*/globalObjectAlignment);
-      }
-      else {
+      } else {
 
-        //FIXME: When the address is 0, ST return 0xFFFFFFFFFFFFFFFF
-        if(Info->base > 0xFFFFFFFF)
+        // FIXME: When the address is 0, ST return 0xFFFFFFFFFFFFFFFF
+        if (Info->base > 0xFFFFFFFF)
           Info->base = 0;
 
-        klee_message("Memory Object %s at 0x%lx of size 0x%lx",
-          i->getName().str().c_str(),Info->base, size);
-
-          mo = memory->allocateCustom(Info->base, size, Info->symbolic,
-          Info->redirected, v, globalObjectAlignment);
-
-          if(mo->isSymbolic) {
-            klee_message(" -> symbolic\n");
-            executeMakeSymbolic(state, mo, Info->name);
-          } else if(Info->redirected){
-            klee_message(" -> externe\n");
-          } else {
-            klee_message(" -> local\n");
+        // XXX: return error if a collision is detected
+        for (std::map<const llvm::GlobalValue *, MemoryObject *>::iterator it =
+                 globalObjects.begin();
+             it != globalObjects.end(); ++it) {
+          if (it->second->address == Info->base) {
+            klee_warning("\n\n");
+            v->dump();
+            it->first->dump();
+            klee_error("A collision has been detected when allocating object "
+                       " at %08x. Note that this address is imported from "
+                       "the symbols "
+                       "table",
+                       Info->base);
           }
+        }
+
+        mo = memory->allocateCustom(Info->base, size, Info->symbolic,
+                                    Info->redirected, v, globalObjectAlignment);
+
+        if (mo->isSymbolic) {
+          klee_message("Memory Object %s at 0x%lx of size 0x%lx -> symbolic",
+                       i->getName().str().c_str(), Info->base, size);
+          executeMakeSymbolic(state, mo, Info->name);
+        } else if (Info->redirected) {
+          klee_message("Memory Object %s at 0x%lx of size 0x%lx -> redirected",
+                       i->getName().str().c_str(), Info->base, size);
+        } else {
+          klee_message("Memory Object %s at 0x%lx of size 0x%lx -> internal",
+                       i->getName().str().c_str(), Info->base, size);
+        }
       }
       if (!mo)
         llvm::report_fatal_error("out of memory");

@@ -82,8 +82,8 @@ void SymbolsTable::initTable() {
 
     SymbolInfo *Info = new SymbolInfo(SymName, SymAddr, SymSize, false, false);
 
-    printf("\tSymbol %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
-           SymAddr, SymSize);
+    //printf("\tSymbol %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
+    //       SymAddr, SymSize);
     symbols.insert(std::pair<StringRef, SymbolInfo *>(SymName, Info));
   }
 

@@ -142,6 +142,10 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
   if (!address)
     return 0;
 
+  if (DeterministicAllocation)
+    klee_message("Deterministic allocation to mapped memory at %08x (Redzone %d B)", address, RedZoneSpace);
+  // else
+  //   klee_message("Allocation to mapped memory at %08x (Redzone %d B)", address, RedZoneSpace);
 
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
@@ -161,6 +165,7 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
   }
 #endif
 
+  // klee_message("Fixed allocation to mapped memory at %08x", address);
   ++stats::allocations;
   MemoryObject *res =
       new MemoryObject(address, size, false, true, true, allocSite, this);
