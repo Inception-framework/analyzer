@@ -593,34 +593,34 @@ void Executor::initializeGlobals(ExecutionState &state) {
   }
 
   // Disabled, we don't want to promote use of live externals.
-#ifdef HAVE_CTYPE_EXTERNALS
-#ifndef WINDOWS
-#ifndef DARWIN
-  /* From /usr/include/errno.h: it [errno] is a per-thread variable. */
-  int *errno_addr = __errno_location();
-  addExternalObject(state, (void *)errno_addr, sizeof *errno_addr, false);
-
-  /* from /usr/include/ctype.h:
-       These point into arrays of 384, so they can be indexed by any `unsigned
-       char' value [0,255]; by EOF (-1); or by any `signed char' value
-       [-128,-1).  ISO C requires that the ctype functions work for `unsigned */
-  const uint16_t **addr = __ctype_b_loc();
-  addExternalObject(state, const_cast<uint16_t*>(*addr-128),
-                    384 * sizeof **addr, true);
-  addExternalObject(state, addr, sizeof(*addr), true);
-
-  const int32_t **lower_addr = __ctype_tolower_loc();
-  addExternalObject(state, const_cast<int32_t*>(*lower_addr-128),
-                    384 * sizeof **lower_addr, true);
-  addExternalObject(state, lower_addr, sizeof(*lower_addr), true);
-
-  const int32_t **upper_addr = __ctype_toupper_loc();
-  addExternalObject(state, const_cast<int32_t*>(*upper_addr-128),
-                    384 * sizeof **upper_addr, true);
-  addExternalObject(state, upper_addr, sizeof(*upper_addr), true);
-#endif
-#endif
-#endif
+// #ifdef HAVE_CTYPE_EXTERNALS
+// #ifndef WINDOWS
+// #ifndef DARWIN
+//   /* From /usr/include/errno.h: it [errno] is a per-thread variable. */
+//   int *errno_addr = __errno_location();
+//   addExternalObject(state, (void *)errno_addr, sizeof *errno_addr, false);
+//
+//   /* from /usr/include/ctype.h:
+//        These point into arrays of 384, so they can be indexed by any `unsigned
+//        char' value [0,255]; by EOF (-1); or by any `signed char' value
+//        [-128,-1).  ISO C requires that the ctype functions work for `unsigned */
+//   const uint16_t **addr = __ctype_b_loc();
+//   addExternalObject(state, const_cast<uint16_t*>(*addr-128),
+//                     384 * sizeof **addr, true);
+//   addExternalObject(state, addr, sizeof(*addr), true);
+//
+//   const int32_t **lower_addr = __ctype_tolower_loc();
+//   addExternalObject(state, const_cast<int32_t*>(*lower_addr-128),
+//                     384 * sizeof **lower_addr, true);
+//   addExternalObject(state, lower_addr, sizeof(*lower_addr), true);
+//
+//   const int32_t **upper_addr = __ctype_toupper_loc();
+//   addExternalObject(state, const_cast<int32_t*>(*upper_addr-128),
+//                     384 * sizeof **upper_addr, true);
+//   addExternalObject(state, upper_addr, sizeof(*upper_addr), true);
+// #endif
+// #endif
+// #endif
 
   // allocate and initialize globals, done in two passes since we may
   // need address of a global in order to initialize some other one.
@@ -3676,15 +3676,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else {
 
-      ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-      uint64_t concrete_address = address_ce->getZExtValue();
+      // ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+      // uint64_t concrete_address = address_ce->getZExtValue();
 
-      std::stringstream stream;
-      stream << "[MemFault] At address : 0x";
-      stream << std::hex << concrete_address;
-      std::string result( stream.str() );
+      // std::stringstream stream;
+      // stream << "[MemFault] At address : 0x";
+      // stream << std::hex << concrete_address;
+      // std::string result( stream.str() );
       // errs() <<  << result << "\n";
-      klee_warning("%s",result.c_str());
+      // klee_warning("%s",result.c_str());
 
       // #ifdef INCEPTION_DEBUG
       //     debugger->notify(Inception::Monitor::dump(target->inst->getParent()->getParent(), target->inst));
