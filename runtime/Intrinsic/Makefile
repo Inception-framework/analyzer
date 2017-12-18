@@ -27,6 +27,6 @@ DEBUG_RUNTIME=1
 NO_PEDANTIC=1
 NO_BUILD_ARCHIVE=1
 
-C.Flags += -fno-builtin -mthumb --target=thumbv7m-eabi -mcpu=cortex-m3 -I/usr/include/newlib/
+C.Flags += -fno-builtin -mthumb --target=thumbv7m-none--eabi -mcpu=cortex-m3 -I/usr/include/newlib/
 
 include $(LEVEL)/Makefile.common

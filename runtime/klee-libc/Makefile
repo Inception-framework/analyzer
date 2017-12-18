@@ -29,6 +29,6 @@ NO_BUILD_ARCHIVE=1
 
 # Add __NO_INLINE__ to prevent glibc from using inline definitions of some
 # builtins.
-C.Flags += -D__NO_INLINE__ -mthumb --target=thumbv7m-eabi -mcpu=cortex-m3 -I/usr/include/newlib/
+C.Flags += -D__NO_INLINE__ -mthumb --target=thumbv7m-none--eabi -mcpu=cortex-m3 -I/usr/include/newlib/
 
 include $(LEVEL)/Makefile.common

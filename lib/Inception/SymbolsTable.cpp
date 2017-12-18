@@ -1,9 +1,11 @@
 #include "inception/SymbolsTable.h"
 
 #include "inception/Configurator.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
+using namespace klee;
 
 namespace Inception {
 
@@ -25,6 +27,8 @@ SymbolsTable::SymbolsTable(llvm::Module *mod) {
   loadBinary();
 
   initTable();
+
+  fillGaps(mod);
 }
 
 SymbolsTable::~SymbolsTable() {}
@@ -37,9 +41,18 @@ void SymbolsTable::initExtern(llvm::Module *mod) {
 
     SymbolInfo *I = it->second;
 
-    Type *Ty = ArrayType::get(IntegerType::get(mod->getContext(), 8), I->size);
+    // Set initializer
+    std::vector<Constant *> const_init_array;
+    for (int i = 0; i < I->size; i++) {
+      const_init_array.push_back(
+          ConstantInt::get(mod->getContext(), APInt(8, I->initializer, 16)));
+    }
 
-    Constant *Initializer = Constant::getNullValue(Ty);
+    ArrayType *Ty =
+        ArrayType::get(IntegerType::get(mod->getContext(), 8), I->size);
+
+    // Constant *Initializer = Constant::getNullValue(Ty);
+    Constant *Initializer = ConstantArray::get(Ty, const_init_array);
 
     // printf("\tSymbol %s [0x%lx:0x%lx]\r\n", it->first.str().c_str(), I->base,
     // I->size);
@@ -49,7 +62,57 @@ void SymbolsTable::initExtern(llvm::Module *mod) {
                        false, // isConstant
                        GlobalValue::CommonLinkage, Initializer, it->first);
 
-    // v->dump();
+    // g->dump();
+  }
+}
+
+void SymbolsTable::fillGaps(llvm::Module *mod) {
+
+  // Retrieve .data section information
+  SymbolInfo *section_info = lookUpSection(".data");
+  if (section_info == NULL) {
+    klee::klee_warning("[SymbolsTable] No .data section found");
+    return;
+  }
+
+  uint64_t section_size = section_info->size;
+  uint64_t section_base = section_info->base;
+  uint64_t section_end = section_base + section_size;
+
+  SymbolInfo *symbole;
+
+  // For each valid address of section_info we need to check if this address
+  // is owned by an LLVM IR variables. If no, we allocate a new IR var there.
+  for (uint64_t i = section_base; i < section_end; i++) {
+    // Is there IR variables owning address i ? NULL if no.
+    if ((symbole = isAddressOwned(i, mod)) == NULL) {
+
+      // Get next owned address
+      uint64_t next = getNextGVar(i, mod);
+      if (next == 0)
+        next = section_end;
+
+      uint64_t size = (next - i);
+      size = size == 0 ? 1 : size;
+
+      Type *Ty;
+      Ty = ArrayType::get(IntegerType::get(mod->getContext(), 32), size);
+      Constant *Initializer = Constant::getNullValue(Ty);
+
+      std::string *name = new std::string("inception_gap_" + std::to_string(i));
+
+      GlobalVariable *data = new GlobalVariable(
+          /*Module=*/*mod,
+          /*Type=*/Ty,
+          /*isConstant=*/false,
+          /*Linkage=*/GlobalValue::CommonLinkage,
+          /*Initializer=*/Initializer, // has initializer, specified below
+          /*Name=*/StringRef(name->c_str()));
+
+      addSymbol(StringRef(name->c_str()), i, size, false, false, 0);
+
+      i += size;
+    }
   }
 }
 
@@ -80,9 +143,10 @@ void SymbolsTable::initTable() {
       continue;
     }
 
-    SymbolInfo *Info = new SymbolInfo(SymName, SymAddr, SymSize, false, false);
+    SymbolInfo *Info =
+        new SymbolInfo(SymName, SymAddr, SymSize, false, false, 0);
 
-    //printf("\tSymbol %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
+    // printf("\tSymbol %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
     //       SymAddr, SymSize);
     symbols.insert(std::pair<StringRef, SymbolInfo *>(SymName, Info));
   }
@@ -102,7 +166,8 @@ void SymbolsTable::initTable() {
 
     // printf("\tSection %s at 0x%08x of 0x%08x B\n", SymName.str().c_str(),
     //        SymAddr, SymSize);
-    SymbolInfo *Info = new SymbolInfo(SymName, SymAddr, SymSize, false, false);
+    SymbolInfo *Info =
+        new SymbolInfo(SymName, SymAddr, SymSize, false, false, 0);
 
     sections.insert(std::pair<StringRef, SymbolInfo *>(SymName, Info));
   }

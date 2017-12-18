@@ -100,6 +100,8 @@ public:
 
   static void read_basepri(klee::ref<klee::Expr> basepri_ptr);
 
+  static bool isDeviceConnected;
+
 private:
   static uint32_t interrupt_vector_base_addr;
 
@@ -112,8 +114,6 @@ private:
   static std::priority_queue<Interrupt *, std::vector<Interrupt *>,
                              InterruptComparator>
       pending_interrupts;
-
-  static bool isDeviceConnected;
 
   static bool isDynamicInterruptTable;
 };

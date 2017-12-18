@@ -700,7 +700,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
         ss << std::hex << v->getName().substr(5, 8).str();
         ss >> address;
 
-        Info = new Inception::SymbolInfo(v->getName(), address, size, false, false);
+        Info = new Inception::SymbolInfo(v->getName(), address, size, false, false, 0);
       } else {
         Info = ST->lookUpVariable(i->getName());
         if (Info == NULL) // || Info->size == 0)
@@ -3626,14 +3626,46 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       return;
     }
 
+    /*
+    * Different configuration are supported by Inception to process
+    * memory IO. The config.json file enables user-defined memory area.
+    * These areas can be redirected to the concrete device (e.g. when
+    * accessing real peripherals mapped-registers). Users can also define
+    * theses areas as Symbolic. In this case accesses are replaced by
+    * symbolic values.
+    *
+    * A config.json flag called Redirection enables/disables any
+    * redirection to the real hardware. This flag override previous
+    * behaviour. Even if a user-defined memory is marked as
+    * redirected, the Redirection flag at True will force Inception to
+    * create a local and not symbolic memory.
+    *
+    * This mechanism is exactly the same for both read write operations.
+    */
+    bool Redirection = Inception::RealInterrupt::isDeviceConnected;
+
     if (inBounds) {
       const ObjectState *os = op.second;
       if (isWrite) {
 
-        if(mo->isExternalized) {
-          if(mo->isSymbolic)
-            return;
+        /*
+        * Trace IO is needed
+        */
+        Inception::Monitor::traceIO(address, value, isWrite, target);
 
+        /*
+        * The isExternalized flag marks user-defined memory areas.
+        * The isSymbolic flag marks the user-defined memory as symbolic.
+        * A write to a Symbolic memory has no effect.
+        */
+        if(mo->isExternalized && mo->isSymbolic)
+          return;
+
+        /*
+        * The isExternalized flag marks user-defined memory areas.
+        * If the Redirection flag is True, redirection is allowed.
+        */
+        if(mo->isExternalized && Redirection) {
           ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
           uint64_t concrete_address = address_ce->getZExtValue();
 
@@ -3641,6 +3673,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           return;
         }
 
+        /*
+        * Otherwise access is done to the local memory.
+        * It happens for internal memory accesses or user-defined memory when
+        * the Redirection flag is at False (and not marked as symbolic).
+        */
         if (os->readOnly) {
           terminateStateOnError(state, "memory error: object read only",
                                 ReadOnly);
@@ -3649,34 +3686,54 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           wos->write(offset, value);
         }
       } else {
+        ref<Expr> result = os->read(offset, type);
 
-        if(mo->isExternalized) {
-          ref<Expr> result = os->read(offset, type);
+        /*
+        * The isExternalized flag marks user-defined memory areas.
+        * The isSymbolic flag marks the user-defined memory as symbolic.
+        */
+        if(mo->isExternalized && mo->isSymbolic) {
+          // Trace IO if needed
+          Inception::Monitor::traceIO(address, result, isWrite, target);
 
-          if(mo->isSymbolic) {
-            // printf("Symbolic value at %lx ! \n", concrete_address);
-            static unsigned id;
-            const Array *array = arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
-                                           Expr::getMinBytesForWidth(result->getWidth()));
-            result = Expr::createTempRead(array, result->getWidth());
-          } else {
-            ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-            uint64_t concrete_address = address_ce->getZExtValue();
-
-            result = Inception::RealTarget::read(concrete_address,
-              &concrete_value, type);
-            // printf("Acces to value at %lx ! \n", concrete_address);
-          }
+          static unsigned id;
+          const Array *array = arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
+                                         Expr::getMinBytesForWidth(result->getWidth()));
+          result = Expr::createTempRead(array, result->getWidth());
           bindLocal(target, state, result);
           return;
         }
 
-        ref<Expr> result = os->read(offset, type);
+        /*
+        * The isExternalized flag marks user-defined memory areas.
+        * If the Redirection flag is True, redirection is allowed.
+        */
+        if(mo->isExternalized && Redirection) {
+          ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
+          uint64_t concrete_address = address_ce->getZExtValue();
 
+          ref<Expr> result = Inception::RealTarget::read(concrete_address,
+            &concrete_value, type);
+          bindLocal(target, state, result);
+
+          // Trace IO if needed
+          Inception::Monitor::traceIO(address, result, isWrite, target);
+
+          return;
+        }
+
+        /*
+        * Otherwise access is done to the local memory.
+        * It happens for internal memory accesses or user-defined memory when
+        * the Redirection flag is at False (and not marked as symbolic).
+        */
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
 
         bindLocal(target, state, result);
+
+        // Trace IO if needed
+        Inception::Monitor::traceIO(address, result, isWrite, target);
       }
 
       return;
@@ -3730,16 +3787,19 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else {
 
-      // ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address);
-      // uint64_t concrete_address = address_ce->getZExtValue();
+      if (const ConstantExpr *address_ce = dyn_cast<ConstantExpr>(address)) {
+        uint64_t concrete_address = address_ce->getZExtValue();
 
-      // std::stringstream stream;
-      // stream << "[MemFault] At address : 0x";
-      // stream << std::hex << concrete_address;
-      // std::string result( stream.str() );
-      // errs() <<  << result << "\n";
-      // klee_warning("%s",result.c_str());
+        std::stringstream stream;
+        stream << "[MemFault] At address : 0x";
+        stream << std::hex << concrete_address;
+        std::string result( stream.str() );
+        klee_warning("%s",result.c_str());
 
+        Inception::Monitor::trace_on = true;
+        Inception::Monitor::trace(state, target);
+        Inception::Monitor::trace_on = false;
+      }
       // #ifdef INCEPTION_DEBUG
       //     debugger->notify(Inception::Monitor::dump(target->inst->getParent()->getParent(), target->inst));
       //     debugger->notify(Inception::Monitor::dump());

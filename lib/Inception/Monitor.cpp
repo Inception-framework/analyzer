@@ -196,15 +196,27 @@ void Monitor::trace(ExecutionState &state, KInstruction *ki) {
 
 void Monitor::traceIO(ref<Expr> address, ref<Expr> value, bool isWrite,
                       KInstruction *target) {
+  uint64_t concrete_value;
+  uint64_t concrete_address;
 
   if (!Monitor::trace_io_on)
     return;
 
   klee::ConstantExpr *address_ce = dyn_cast<klee::ConstantExpr>(address);
-  uint64_t concrete_address = address_ce->getZExtValue();
+  if (address_ce != NULL) {
+    concrete_address = address_ce->getZExtValue();
+  } else {
+    printf("[TraceIO] Not a concrete address\n\n");
+    return;
+  }
 
   klee::ConstantExpr *value_ce = dyn_cast<klee::ConstantExpr>(value);
-  uint64_t concrete_value = value_ce->getZExtValue();
+  if (value_ce != NULL) {
+    concrete_value = value_ce->getZExtValue();
+  } else {
+    printf("[TraceIO] Not a concrete value\n\n");
+    return;
+  }
 
   std::string srcFile = target->info->file;
   if (srcFile.length() > 42)

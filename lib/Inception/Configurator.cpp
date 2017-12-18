@@ -90,7 +90,7 @@ bool Configurator::next_memory(SymbolsTable *sy) {
 
   const Json::Value realMemory = (*Configurator::root)["RealMemory"];
 
-  uint32_t address, size;
+  uint32_t address, size, initializer;
   bool symbolic;
 
   std::stringstream ss;
@@ -113,6 +113,12 @@ bool Configurator::next_memory(SymbolsTable *sy) {
     ss >> size;
     ss.clear();
 
+    std::string s_init =
+        realMemory[Configurator::memory_index].get("initializer", "0").asString();
+    ss << std::hex << s_init;
+    ss >> initializer;
+    ss.clear();
+
     symbolic =
         realMemory[Configurator::memory_index].get("symbolic", false).asBool();
 
@@ -120,8 +126,13 @@ bool Configurator::next_memory(SymbolsTable *sy) {
     name.copy(dst, name.length());
     dst[name.length()] = '\0';
 
+    if(size == 0) {
+      klee_warning("Error: %s 0-sized memory area in config.json.", name);
+    }
+
     // (sy->*callback)(llvm::StringRef(name), address, size, symbolic);
-    sy->addSymbol(llvm::StringRef(dst, name.length()), address, size, symbolic);
+    sy->addSymbol(llvm::StringRef(dst, name.length()), address, size, symbolic,
+                  true, initializer);
 
     Configurator::memory_index++;
 

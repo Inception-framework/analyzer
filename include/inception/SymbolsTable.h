@@ -24,13 +24,15 @@ typedef struct SymbolInfo {
   llvm::StringRef name;
   bool symbolic;
   bool redirected;
-  SymbolInfo(llvm::StringRef _name, uint64_t _base, uint64_t _size, bool _symbolic,
-             bool _redirected) {
+  uint64_t initializer;
+  SymbolInfo(llvm::StringRef _name, uint64_t _base, uint64_t _size,
+             bool _symbolic, bool _redirected, uint64_t _initializer) {
     name = _name;
     base = _base;
     size = _size;
     symbolic = _symbolic;
     redirected = _redirected;
+    initializer = _initializer;
   }
 } SymbolInfo;
 
@@ -49,12 +51,15 @@ public:
 
   SymbolInfo *lookUpSection(StringRef name);
 
-  void addSymbol(llvm::StringRef name, uint32_t base, uint32_t size, bool symolic) {
+  void addSymbol(llvm::StringRef name, uint32_t base, uint32_t size,
+                 bool symbolic, bool redirected = true,
+                 uint64_t initializer = 0) {
 
-    SymbolInfo *Info = new SymbolInfo(name, base, size, symolic, true);
+    SymbolInfo *Info =
+        new SymbolInfo(name, base, size, symbolic, redirected, initializer);
 
-    //printf("Adding symbol(%s, 0x%08x, 0x%08x)\n", name.str().c_str(), Info->base,
-    //       Info->size);
+    // printf("Adding symbol(%s, 0x%08x, 0x%08x, 0x%08x)\n", name.str().c_str(),
+    //        Info->base, Info->size, initializer);
 
     symbols.insert(std::pair<StringRef, SymbolInfo *>(name, Info));
   }
@@ -68,7 +73,8 @@ public:
 
       SymbolInfo *I = it->second;
 
-      printf("Symbol %s [0x%lx:0x%lx]\r\n", it->first.str().c_str(), I->base, I->size);
+      printf("Symbol %s [0x%lx:0x%lx]\r\n", it->first.str().c_str(), I->base,
+             I->size);
     }
     printf("------------------------------\n");
   }
@@ -77,6 +83,8 @@ private:
   void initConfig();
 
   void loadBinary();
+
+  void fillGaps(llvm::Module *mod);
 
   std::map<StringRef, SymbolInfo *> symbols;
 
@@ -87,6 +95,46 @@ private:
   std::unique_ptr<object::ObjectFile> Executable;
 
   bool disable;
+
+  SymbolInfo *isAddressOwned(uint64_t i, llvm::Module *mod) {
+    for (std::map<StringRef, SymbolInfo *>::iterator si = symbols.begin(),
+                                                     se = symbols.end();
+         si != se; ++si) {
+      uint64_t address = si->second->base;
+      uint64_t size = si->second->size;
+
+      if (size == 0)
+        size = 1;
+
+      if (i >= address && i < (address + size)) {
+        if (mod->getGlobalVariable(si->second->name) != NULL) {
+          return si->second;
+        }
+      }
+    }
+    return NULL;
+  }
+
+  uint64_t getNextGVar(uint64_t i, llvm::Module *mod) {
+    uint64_t min = 0;
+
+    for (std::map<StringRef, SymbolInfo *>::iterator si = symbols.begin(),
+                                                     se = symbols.end();
+         si != se; ++si) {
+      uint64_t address = si->second->base;
+      uint64_t size = si->second->size;
+      if (size == 0)
+        size = 1;
+
+      if (mod->getGlobalVariable(si->second->name) != NULL) {
+        if (i <= address) {
+          if (min == 0 || min > address)
+            min = address;
+        }
+      }
+    }
+    return min;
+  }
 };
 
 } // namespace Inception
