@@ -143,7 +143,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
     return 0;
 
   if (DeterministicAllocation)
-    klee_message("Deterministic allocation to mapped memory at %08x (Redzone %d B)", address, RedZoneSpace);
+   // klee_message("Deterministic allocation to mapped memory at %08x (Redzone %d B)", address, RedZoneSpace);
   // else
   //   klee_message("Allocation to mapped memory at %08x (Redzone %d B)", address, RedZoneSpace);
 
