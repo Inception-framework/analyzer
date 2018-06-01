@@ -745,7 +745,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
         if (mo->isSymbolic) {
           klee_message("Memory Object %s at 0x%lx of size 0x%lx -> symbolic",
                        i->getName().str().c_str(), Info->base, size);
-          executeMakeSymbolic(state, mo, Info->name);
+          mo->setName(i->getName().str().c_str()); 
+          executeMakeSymbolic(state, mo, i->getName().str().c_str());
         } else if (Info->redirected) {
           klee_message("Memory Object %s at 0x%lx of size 0x%lx -> redirected",
                        i->getName().str().c_str(), Info->base, size);
