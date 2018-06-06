@@ -5,6 +5,7 @@ LLVM_VERSION=3.6
 MODE=DEBUG
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR=/media/noname/3a224af4-22de-4deb-ad88-08422268a9fc/Inception/Analyzer/
 
 #./autoconf/AutoRegen.sh
 ./autoconf/AutoRegen.sh $DIR/../tools/llvm/llvm3.6/

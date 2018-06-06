@@ -745,7 +745,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
         if (mo->isSymbolic) {
           klee_message("Memory Object %s at 0x%lx of size 0x%lx -> symbolic",
                        i->getName().str().c_str(), Info->base, size);
-          mo->setName(i->getName().str().c_str()); 
+          mo->setName(i->getName().str().c_str());
           executeMakeSymbolic(state, mo, i->getName().str().c_str());
         } else if (Info->redirected) {
           klee_message("Memory Object %s at 0x%lx of size 0x%lx -> redirected",
@@ -1661,8 +1661,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           klee_warning("[Return from interrupt] switching to thread_id %p", pc);
           Function *ret_func = device_to_host_map.find(pc)->second;
           if (ret_func == NULL)
-            klee_error("[Return from interrupt] Fail to resolve name %s",
-                       ret_func->getName().str().c_str());
+            klee_error("[Return from interrupt] Fail to resolve return address");
           else
             klee_warning("[Return from interrupt] Return pc resolved to %s ",
                          ret_func->getName().str().c_str());
