@@ -2,6 +2,10 @@ Maintained since 2017 by:
   Maxim Integrated
   Eurecom
 
+Contact:
+  Giovanni Camurati <giovanni.camurati@eurecom.fr>
+  Nassim Corteggiani <nassim.corteggiani@maximintegrated.com>
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
