@@ -1,5 +1,5 @@
 /*
-    This file is part of Inception-analyzer.
+    This file is part of Inception analyzer.
 
     Inception-analyzer is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -12,7 +12,13 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+    along with Inception analyzer.  If not, see <https://www.gnu.org/licenses/>.
+
+    Copyright (c) 2017 Maxim Integrated, Inc.
+    Author: Nassim Corteggiani <nassim.corteggiani@maximintegrated.com>
+
+    Copyright (c) 2017 EURECOM, Inc.
+    Author: Giovanni Camurati <giovanni.camurati@eurecom.fr>
 */
 
 #ifndef REAL_CONTEXT_SAVER_H
