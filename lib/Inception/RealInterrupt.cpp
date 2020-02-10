@@ -268,7 +268,8 @@ void RealInterrupt::serve_pending_interrupt() {
   klee_warning("[RealInterrupt] updating pc to current id %p", current_id);
   klee::ref<klee::Expr> ID =
       klee::ConstantExpr::create(current_id, Expr::Int32);
-  executor->writeAt(*current, PC, ID);
+  if( dyn_cast<klee::ConstantExpr>(PC)->getZExtValue() > 0)
+    executor->writeAt(*current, PC, ID);
 
   // get the pending interrupt
   RealInterrupt::current_interrupt = RealInterrupt::pending_interrupts.top();

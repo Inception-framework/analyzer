@@ -1654,7 +1654,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
         // Read the return address popped by the handler
         ref<Expr> PC = getPCAddress();
-        int pc = dyn_cast<ConstantExpr>(readAt(state, PC))->getZExtValue();
+        int pc = 0;
+        if( dyn_cast<ConstantExpr>(PC)->getZExtValue() > 0 )
+          pc = dyn_cast<ConstantExpr>(readAt(state, PC))->getZExtValue();
 
         // if it is different from the pushed one, switch context
         if (pc != state.stack.getSelectedThreadID()) {
